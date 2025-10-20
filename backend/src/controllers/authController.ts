@@ -35,9 +35,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Generar token
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
-    const token = jwt.sign({ userId: user._id }, jwtSecret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
 
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
@@ -91,9 +93,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Generar token
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
-    const token = jwt.sign({ userId: user._id }, jwtSecret, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    });
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
 
     res.json({
       message: 'Inicio de sesión exitoso',
