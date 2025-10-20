@@ -1,0 +1,113 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add token to requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle responses and errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+
+// Auth API
+export const authAPI = {
+  login: (email: string, password: string) =>
+    api.post('/auth/login', { email, password }),
+
+  register: (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    address?: string;
+  }) => api.post('/auth/register', data),
+
+  getProfile: () => api.get('/auth/profile'),
+};
+
+// Lottery API
+export const lotteryAPI = {
+  getAll: (params?: any) => api.get('/lotteries', { params }),
+  getById: (id: string) => api.get(`/lotteries/${id}`),
+  create: (data: any) => api.post('/lotteries', data),
+  update: (id: string, data: any) => api.put(`/lotteries/${id}`, data),
+  draw: (id: string) => api.post(`/lotteries/${id}/draw`),
+  cancel: (id: string) => api.post(`/lotteries/${id}/cancel`),
+};
+
+// Ticket API
+export const ticketAPI = {
+  purchase: (data: { lotteryId: string; numbers?: number[]; quantity?: number }) =>
+    api.post('/tickets/purchase', data),
+
+  getUserTickets: (params?: any) => api.get('/tickets', { params }),
+
+  verifyByCode: (code: string) => api.get(`/tickets/verify/${code}`),
+
+  getByNumber: (number: string) => api.get(`/tickets/number/${number}`),
+};
+
+// Payment API
+export const paymentAPI = {
+  deposit: (data: { amount: number; method: string; metadata?: any }) =>
+    api.post('/payments/deposit', data),
+
+  withdraw: (data: { amount: number; method: string; metadata?: any }) =>
+    api.post('/payments/withdraw', data),
+
+  getHistory: (params?: any) => api.get('/payments/history', { params }),
+
+  getAll: (params?: any) => api.get('/payments/all', { params }),
+};
+
+// Ranking API
+export const rankingAPI = {
+  getTopBuyers: (limit?: number) =>
+    api.get('/rankings/top-buyers', { params: { limit } }),
+
+  getTopWinners: (limit?: number) =>
+    api.get('/rankings/top-winners', { params: { limit } }),
+
+  getTopSpenders: (limit?: number) =>
+    api.get('/rankings/top-spenders', { params: { limit } }),
+
+  getStats: () => api.get('/rankings/stats'),
+};
+
+// User API
+export const userAPI = {
+  getAll: (params?: any) => api.get('/users', { params }),
+  getById: (id: string) => api.get(`/users/${id}`),
+  update: (id: string, data: any) => api.put(`/users/${id}`, data),
+  deactivate: (id: string) => api.post(`/users/${id}/deactivate`),
+  activate: (id: string) => api.post(`/users/${id}/activate`),
+  getStats: (id: string) => api.get(`/users/${id}/stats`),
+};
