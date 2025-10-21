@@ -12,7 +12,63 @@ import {
   ShoppingCart,
   Shuffle,
   Info,
+  Clock,
+  Users,
+  Zap,
 } from 'lucide-react';
+
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime();
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="grid grid-cols-4 gap-3 text-center">
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-4">
+        <div className="text-3xl font-bold text-white">{timeLeft.days}</div>
+        <div className="text-xs text-white opacity-90 mt-1">Días</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-4">
+        <div className="text-3xl font-bold text-white">{timeLeft.hours}</div>
+        <div className="text-xs text-white opacity-90 mt-1">Horas</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-4">
+        <div className="text-3xl font-bold text-white">{timeLeft.minutes}</div>
+        <div className="text-xs text-white opacity-90 mt-1">Min</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-4">
+        <div className="text-3xl font-bold text-white">{timeLeft.seconds}</div>
+        <div className="text-xs text-white opacity-90 mt-1">Seg</div>
+      </div>
+    </div>
+  );
+};
 
 const LotteryDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +86,17 @@ const LotteryDetail = () => {
       loadLottery();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (lottery) {
+      // Set default selection mode based on lottery configuration
+      if (lottery.selectionType === 'manual') {
+        setManualSelection(true);
+      } else if (lottery.selectionType === 'random') {
+        setManualSelection(false);
+      }
+    }
+  }, [lottery]);
 
   const loadLottery = async () => {
     try {
@@ -75,6 +142,20 @@ const LotteryDetail = () => {
     }
   };
 
+  const handleQuickSelect = (qty: number) => {
+    const maxAllowed = getMaxAllowedQuantity();
+    const actualQty = Math.min(qty, maxAllowed);
+    setQuantity(actualQty);
+  };
+
+  const getMaxAllowedQuantity = () => {
+    const remainingTickets = lottery.maxTickets - lottery.soldTickets;
+    if (lottery.maxTicketsPerPlayer === 0) {
+      return remainingTickets;
+    }
+    return Math.min(remainingTickets, lottery.maxTicketsPerPlayer);
+  };
+
   const handlePurchase = async () => {
     if (!user) {
       toast.error('Debes iniciar sesión para comprar boletos');
@@ -84,6 +165,12 @@ const LotteryDetail = () => {
 
     if (manualSelection && selectedNumbers.length !== lottery.numbersRange.count) {
       toast.error(`Debes seleccionar exactamente ${lottery.numbersRange.count} números`);
+      return;
+    }
+
+    const maxAllowed = getMaxAllowedQuantity();
+    if (quantity > maxAllowed) {
+      toast.error(`Solo puedes comprar hasta ${maxAllowed} boletos`);
       return;
     }
 
@@ -126,6 +213,12 @@ const LotteryDetail = () => {
   const totalCost = lottery.ticketPrice * quantity;
   const remainingTickets = lottery.maxTickets - lottery.soldTickets;
   const isActive = lottery.status === 'active';
+  const maxAllowed = getMaxAllowedQuantity();
+
+  // Determine selection mode based on lottery configuration
+  const showManualSelection = lottery.selectionType === 'manual' || lottery.selectionType === 'both';
+  const showRandomSelection = lottery.selectionType === 'random' || lottery.selectionType === 'both';
+  const canToggleSelection = lottery.selectionType === 'both';
 
   return (
     <PublicLayout>
@@ -134,7 +227,10 @@ const LotteryDetail = () => {
         <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl shadow-xl p-8 text-white">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
-              <h1 className="text-4xl font-bold mb-4">{lottery.name}</h1>
+              <h1 className="text-4xl font-bold mb-2">{lottery.name}</h1>
+              {lottery.lotteryName && (
+                <p className="text-primary-100 text-xl mb-4">{lottery.lotteryName}</p>
+              )}
               <p className="text-primary-100 text-lg mb-6">
                 {lottery.description}
               </p>
@@ -152,7 +248,7 @@ const LotteryDetail = () => {
                 <img
                   src={lottery.image}
                   alt={lottery.name}
-                  className="rounded-xl shadow-2xl max-h-64 object-contain"
+                  className="rounded-xl shadow-2xl max-h-64 object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
@@ -162,8 +258,19 @@ const LotteryDetail = () => {
           </div>
         </div>
 
+        {/* Countdown Timer */}
+        {isActive && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Clock className="text-primary-600" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">Tiempo Restante</h2>
+            </div>
+            <CountdownTimer targetDate={new Date(lottery.drawDate)} />
+          </div>
+        )}
+
         {/* Lottery Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center space-x-3 mb-2">
               <Trophy className="text-yellow-500" size={24} />
@@ -214,28 +321,43 @@ const LotteryDetail = () => {
               {new Date(lottery.drawDate).toLocaleTimeString()}
             </p>
           </div>
+
+          {lottery.maxTicketsPerPlayer > 0 && (
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="flex items-center space-x-3 mb-2">
+                <Users className="text-purple-500" size={24} />
+                <p className="text-sm text-gray-600">Máximo por Jugador</p>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">
+                {lottery.maxTicketsPerPlayer}
+              </p>
+              <p className="text-sm text-gray-600 mt-1">boletos</p>
+            </div>
+          )}
         </div>
 
-        {/* Prize Distribution */}
-        {lottery.prizeDistribution && lottery.prizeDistribution.length > 0 && (
+        {/* Prizes */}
+        {lottery.prizes && lottery.prizes.length > 0 && (
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Distribución de Premios
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {lottery.prizeDistribution.map((prize: any, idx: number) => (
+            <div className="flex items-center space-x-2 mb-4">
+              <Trophy className="text-yellow-600" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">Premios</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {lottery.prizes.map((prize: any, idx: number) => (
                 <div
                   key={idx}
-                  className="border-2 border-primary-200 rounded-lg p-4 text-center bg-gradient-to-br from-primary-50 to-white"
+                  className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg p-6 text-center"
                 >
-                  <p className="text-lg font-semibold text-gray-700">
-                    {idx === 0 && '🥇 '}{idx === 1 && '🥈 '}{idx === 2 && '🥉 '}
-                    Posición {prize.position}
+                  <div className="inline-flex items-center justify-center w-12 h-12 bg-yellow-500 text-white rounded-full font-bold text-lg mb-3">
+                    {prize.position}
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 mb-2">
+                    {prize.name}
                   </p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">
-                    ${prize.amount?.toLocaleString() || 'TBD'}
+                  <p className="text-3xl font-bold text-green-600">
+                    ${prize.amount.toLocaleString()}
                   </p>
-                  <p className="text-sm text-gray-600">{prize.percentage}%</p>
                 </div>
               ))}
             </div>
@@ -249,38 +371,41 @@ const LotteryDetail = () => {
               Comprar Boletos
             </h2>
 
-            {/* Selection Mode */}
-            <div className="mb-6">
-              <label className="flex items-center space-x-3 mb-4">
-                <input
-                  type="checkbox"
-                  checked={manualSelection}
-                  onChange={(e) => {
-                    setManualSelection(e.target.checked);
-                    setSelectedNumbers([]);
-                  }}
-                  className="w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
-                />
-                <span className="text-gray-900 font-medium">
-                  Seleccionar números manualmente
-                </span>
-              </label>
+            {/* Selection Mode Toggle (only if 'both') */}
+            {canToggleSelection && (
+              <div className="mb-6">
+                <label className="flex items-center space-x-3 mb-4">
+                  <input
+                    type="checkbox"
+                    checked={manualSelection}
+                    onChange={(e) => {
+                      setManualSelection(e.target.checked);
+                      setSelectedNumbers([]);
+                    }}
+                    className="w-5 h-5 text-primary-600 rounded focus:ring-2 focus:ring-primary-500"
+                  />
+                  <span className="text-gray-900 font-medium">
+                    Seleccionar números manualmente
+                  </span>
+                </label>
+              </div>
+            )}
 
-              {!manualSelection && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <Info className="text-blue-600 flex-shrink-0" size={20} />
-                    <p className="text-sm text-blue-800">
-                      Los números serán seleccionados aleatoriamente al momento de la compra.
-                      Selecciona la cantidad de boletos que deseas comprar.
-                    </p>
-                  </div>
+            {/* Info Banner */}
+            {showRandomSelection && !manualSelection && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                  <Info className="text-blue-600 flex-shrink-0" size={20} />
+                  <p className="text-sm text-blue-800">
+                    Los números serán seleccionados aleatoriamente al momento de la compra.
+                    Selecciona la cantidad de boletos que deseas comprar.
+                  </p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Manual Number Selection */}
-            {manualSelection && (
+            {showManualSelection && manualSelection && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-gray-700 font-medium">
@@ -296,26 +421,31 @@ const LotteryDetail = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-8 md:grid-cols-12 gap-2 mb-4">
+                {/* Ticket Number Grid */}
+                <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-16 gap-2 mb-4 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-lg">
                   {Array.from(
                     {
                       length:
                         lottery.numbersRange.max - lottery.numbersRange.min + 1,
                     },
                     (_, i) => i + lottery.numbersRange.min
-                  ).map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => toggleNumber(num)}
-                      className={`aspect-square rounded-lg font-bold transition-all ${
-                        selectedNumbers.includes(num)
-                          ? 'bg-primary-600 text-white shadow-lg scale-110'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  ))}
+                  ).map((num) => {
+                    const padding = Math.max(4, lottery.numbersRange.max.toString().length);
+                    const ticketNumber = num.toString().padStart(padding, '0');
+                    return (
+                      <button
+                        key={num}
+                        onClick={() => toggleNumber(num)}
+                        className={`px-2 py-2 rounded-lg font-mono font-bold text-sm transition-all ${
+                          selectedNumbers.includes(num)
+                            ? 'bg-primary-600 text-white shadow-lg scale-105'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {ticketNumber}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -330,7 +460,7 @@ const LotteryDetail = () => {
                           key={num}
                           className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold"
                         >
-                          {num}
+                          {num.toString().padStart(4, '0')}
                         </span>
                       ))
                     ) : (
@@ -341,43 +471,67 @@ const LotteryDetail = () => {
               </div>
             )}
 
-            {/* Quantity Selection */}
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
-                Cantidad de Boletos
-              </label>
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold text-xl"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) =>
-                    setQuantity(
-                      Math.max(1, Math.min(remainingTickets, parseInt(e.target.value) || 1))
-                    )
-                  }
-                  className="w-24 px-4 py-2 border border-gray-300 rounded-lg text-center font-bold text-xl"
-                  min="1"
-                  max={remainingTickets}
-                />
-                <button
-                  onClick={() =>
-                    setQuantity(Math.min(remainingTickets, quantity + 1))
-                  }
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold text-xl"
-                >
-                  +
-                </button>
+            {/* Quantity Selection with Quick Buttons */}
+            {!manualSelection && (
+              <div className="mb-6">
+                {/* Quick Select Buttons */}
+                {lottery.randomButtons && lottery.randomButtons.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-3">
+                      Selección Rápida
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {lottery.randomButtons.map((qty: number) => (
+                        <button
+                          key={qty}
+                          onClick={() => handleQuickSelect(qty)}
+                          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 rounded-lg hover:from-primary-200 hover:to-primary-300 transition-all font-bold shadow-md hover:shadow-lg"
+                        >
+                          <Zap size={20} />
+                          <span>{qty} boletos</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <label className="block text-gray-700 font-medium mb-2">
+                  Cantidad de Boletos
+                </label>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold text-xl"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    value={quantity}
+                    onChange={(e) =>
+                      setQuantity(
+                        Math.max(1, Math.min(maxAllowed, parseInt(e.target.value) || 1))
+                      )
+                    }
+                    className="w-24 px-4 py-2 border border-gray-300 rounded-lg text-center font-bold text-xl"
+                    min="1"
+                    max={maxAllowed}
+                  />
+                  <button
+                    onClick={() =>
+                      setQuantity(Math.min(maxAllowed, quantity + 1))
+                    }
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-bold text-xl"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Máximo: {maxAllowed} boletos
+                  {lottery.maxTicketsPerPlayer > 0 && ` (límite por jugador: ${lottery.maxTicketsPerPlayer})`}
+                </p>
               </div>
-              <p className="text-sm text-gray-600 mt-2">
-                Máximo: {remainingTickets} boletos disponibles
-              </p>
-            </div>
+            )}
 
             {/* Total and Purchase */}
             <div className="border-t pt-6">
