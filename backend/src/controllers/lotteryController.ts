@@ -5,6 +5,29 @@ import { validationResult } from 'express-validator';
 import { calculatePrizeDistribution, performDraw } from '../utils/lotteryDrawing';
 
 /**
+ * Genera el número de control automáticamente
+ */
+const generateControlNumber = async (): Promise<string> => {
+  const currentYear = new Date().getFullYear();
+  const prefix = `LOT-${currentYear}-`;
+
+  // Buscar el último sorteo del año actual
+  const lastLottery = await Lottery.findOne({
+    controlNumber: new RegExp(`^${prefix}`),
+  }).sort({ controlNumber: -1 });
+
+  let sequence = 1;
+  if (lastLottery && lastLottery.controlNumber) {
+    const lastSequence = parseInt(lastLottery.controlNumber.split('-')[2]);
+    sequence = lastSequence + 1;
+  }
+
+  // Formatear con padding (001, 002, etc.)
+  const paddedSequence = sequence.toString().padStart(3, '0');
+  return `${prefix}${paddedSequence}`;
+};
+
+/**
  * Crea una nueva lotería (solo admin)
  */
 export const createLottery = async (
@@ -20,18 +43,32 @@ export const createLottery = async (
 
     const {
       name,
+      lotteryName,
       description,
+      image,
       ticketPrice,
       drawDate,
       maxTickets,
+      maxTicketsPerPlayer,
+      prizes,
       numbersRange,
+      selectionType,
+      randomButtons,
       prizePercentages,
     } = req.body;
 
-    // Calcular premio total basado en ventas esperadas
-    const totalPrize = ticketPrice * maxTickets;
+    // Generar número de control automáticamente
+    const controlNumber = await generateControlNumber();
 
-    // Calcular distribución de premios
+    // Calcular premio total basado en los premios configurados o en ventas esperadas
+    let totalPrize = 0;
+    if (prizes && prizes.length > 0) {
+      totalPrize = prizes.reduce((sum: number, prize: any) => sum + prize.amount, 0);
+    } else {
+      totalPrize = ticketPrice * maxTickets;
+    }
+
+    // Calcular distribución de premios para compatibilidad
     const prizeDistribution = calculatePrizeDistribution(
       totalPrize,
       prizePercentages || [
@@ -42,13 +79,20 @@ export const createLottery = async (
     );
 
     const lottery = await Lottery.create({
+      controlNumber,
       name,
+      lotteryName,
       description,
+      image,
       ticketPrice,
       totalPrize,
       drawDate: new Date(drawDate),
       maxTickets,
+      maxTicketsPerPlayer: maxTicketsPerPlayer || 0,
+      prizes: prizes || [],
       numbersRange: numbersRange || { min: 1, max: 50, count: 6 },
+      selectionType: selectionType || 'both',
+      randomButtons: randomButtons || [5, 10, 50],
       prizeDistribution,
       createdBy: req.user!._id,
       status: new Date(drawDate) > new Date() ? 'upcoming' : 'active',

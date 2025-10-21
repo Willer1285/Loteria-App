@@ -1,21 +1,28 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILottery extends Document {
-  controlNumber: string; // Número de control único del sorteo
-  name: string;
+  controlNumber: string; // Número de control único del sorteo (generado automáticamente)
+  name: string; // Nombre del sorteo
+  lotteryName: string; // Nombre de la lotería
   description: string;
   image?: string; // Imagen del sorteo
   ticketPrice: number;
   totalPrize: number;
   drawDate: Date;
   status: 'upcoming' | 'active' | 'drawing' | 'completed' | 'cancelled';
-  maxTickets: number;
+  maxTickets: number; // Cantidad total de boletos/números
   soldTickets: number;
+  maxTicketsPerPlayer: number; // Máximo de boletos que puede comprar un jugador (0 = sin límite)
   winningNumbers?: number[];
   winners?: {
     userId: mongoose.Types.ObjectId;
     ticketId: mongoose.Types.ObjectId;
     prize: number;
+    position: number;
+  }[];
+  prizes: {
+    name: string; // Ej: "1er Lugar", "2do Lugar"
+    amount: number;
     position: number;
   }[];
   prizeDistribution: {
@@ -28,6 +35,8 @@ export interface ILottery extends Document {
     max: number;
     count: number;
   };
+  selectionType: 'manual' | 'random' | 'both'; // Tipo de selección de números
+  randomButtons: number[]; // Botones de selección al azar [5, 10, 50]
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +51,11 @@ const LotterySchema = new Schema<ILottery>(
       trim: true,
     },
     name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lotteryName: {
       type: String,
       required: true,
       trim: true,
@@ -82,6 +96,12 @@ const LotterySchema = new Schema<ILottery>(
       default: 0,
       min: 0,
     },
+    maxTicketsPerPlayer: {
+      type: Number,
+      required: true,
+      default: 0, // 0 = sin límite
+      min: 0,
+    },
     winningNumbers: {
       type: [Number],
     },
@@ -97,6 +117,23 @@ const LotterySchema = new Schema<ILottery>(
         },
         prize: Number,
         position: Number,
+      },
+    ],
+    prizes: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+        amount: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+        position: {
+          type: Number,
+          required: true,
+        },
       },
     ],
     prizeDistribution: [
@@ -122,6 +159,16 @@ const LotterySchema = new Schema<ILottery>(
         required: true,
         default: 6,
       },
+    },
+    selectionType: {
+      type: String,
+      enum: ['manual', 'random', 'both'],
+      required: true,
+      default: 'both',
+    },
+    randomButtons: {
+      type: [Number],
+      default: [5, 10, 50],
     },
     createdBy: {
       type: Schema.Types.ObjectId,
