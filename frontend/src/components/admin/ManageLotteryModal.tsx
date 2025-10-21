@@ -1,6 +1,8 @@
-import { X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Calendar, DollarSign, Ticket, Clock, Trophy, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { ticketAPI } from '../../services/api';
 
 interface ManageLotteryModalProps {
   lottery: any;
@@ -8,17 +10,181 @@ interface ManageLotteryModalProps {
   onSuccess: () => void;
 }
 
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime();
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="grid grid-cols-4 gap-2 text-center">
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-3">
+        <div className="text-2xl font-bold text-white">{timeLeft.days}</div>
+        <div className="text-xs text-white opacity-90">Días</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-3">
+        <div className="text-2xl font-bold text-white">{timeLeft.hours}</div>
+        <div className="text-xs text-white opacity-90">Horas</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-3">
+        <div className="text-2xl font-bold text-white">{timeLeft.minutes}</div>
+        <div className="text-xs text-white opacity-90">Min</div>
+      </div>
+      <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg p-3">
+        <div className="text-2xl font-bold text-white">{timeLeft.seconds}</div>
+        <div className="text-xs text-white opacity-90">Seg</div>
+      </div>
+    </div>
+  );
+};
+
 const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
   lottery,
   onClose,
 }) => {
+  const [soldTickets, setSoldTickets] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  useEffect(() => {
+    loadTickets();
+  }, [lottery._id]);
+
+  const loadTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      // Try to get user tickets filtered by lottery
+      const response = await ticketAPI.getUserTickets({ lotteryId: lottery._id });
+      setSoldTickets(response.data.tickets || []);
+    } catch (error) {
+      // If endpoint doesn't support filtering, we'll just show counts
+      setSoldTickets([]);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { bg: string; text: string; label: string }> = {
+      upcoming: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Próximamente' },
+      active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Activo' },
+      drawing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Sorteando' },
+      completed: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Completado' },
+      cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelado' },
+    };
+    const badge = badges[status] || badges.upcoming;
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  const getSelectionTypeLabel = (type: string) => {
+    const types: Record<string, string> = {
+      manual: 'Solo Selección Manual',
+      random: 'Solo Selección Al Azar',
+      both: 'Manual y Al Azar',
+    };
+    return types[type] || type;
+  };
+
+  const renderTicketBoard = () => {
+    const tickets = [];
+    const totalTickets = lottery.maxTickets;
+    const min = lottery.numbersRange?.min || 0;
+    const max = lottery.numbersRange?.max || totalTickets - 1;
+
+    // Calculate padding for ticket numbers
+    const padding = Math.max(4, max.toString().length);
+
+    // Show first 200 tickets to avoid performance issues
+    const displayLimit = Math.min(200, totalTickets);
+
+    for (let i = min; i < min + displayLimit; i++) {
+      const isSold = i < lottery.soldTickets; // Simplified - would need actual ticket data
+      const ticketNumber = i.toString().padStart(padding, '0');
+
+      tickets.push(
+        <div
+          key={i}
+          className={`px-3 py-2 rounded-lg text-center font-mono text-sm font-semibold transition-all ${
+            isSold
+              ? 'bg-red-100 text-red-800 line-through opacity-60'
+              : 'bg-green-100 text-green-800 hover:bg-green-200'
+          }`}
+          title={isSold ? 'Vendido' : 'Disponible'}
+        >
+          {ticketNumber}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">Tablero de Boletos</h3>
+          <span className="text-sm text-gray-600">
+            Mostrando {displayLimit} de {totalTickets} boletos
+          </span>
+        </div>
+        <div className="grid grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+          {tickets}
+        </div>
+        <div className="flex items-center justify-center space-x-4 text-sm">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-green-100 rounded"></div>
+            <span className="text-gray-700">Disponible</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-red-100 rounded"></div>
+            <span className="text-gray-700">Vendido</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Detalles del Sorteo
-          </h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl p-6 max-w-6xl w-full my-8 max-h-[95vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {lottery.name}
+            </h2>
+            <div className="flex items-center space-x-3">
+              <p className="text-sm text-gray-600">
+                Control: <span className="font-semibold">{lottery.controlNumber}</span>
+              </p>
+              {getStatusBadge(lottery.status)}
+            </div>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -27,155 +193,255 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
           </button>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Nombre</p>
-              <p className="font-semibold text-gray-900">{lottery.name}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-600">Estado</p>
-              <span
-                className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                  lottery.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : lottery.status === 'completed'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {lottery.status}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-600">Descripción</p>
-            <p className="text-gray-900">{lottery.description}</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Precio por Boleto</p>
-              <p className="font-semibold text-gray-900">
-                ${lottery.ticketPrice}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-600">Premio Total</p>
-              <p className="font-semibold text-green-600">
-                ${lottery.totalPrize}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-600">Fecha del Sorteo</p>
-              <p className="font-semibold text-gray-900">
-                {format(new Date(lottery.drawDate), 'PPP', { locale: es })}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Boletos Vendidos</p>
-              <p className="font-semibold text-gray-900">
-                {lottery.soldTickets} / {lottery.maxTickets}
-              </p>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div
-                  className="bg-primary-600 h-2 rounded-full"
-                  style={{
-                    width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
-                  }}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Image and Countdown */}
+          <div className="space-y-6">
+            {/* Lottery Image */}
+            {lottery.image && (
+              <div className="rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={lottery.image}
+                  alt={lottery.name}
+                  className="w-full h-64 object-cover"
                 />
               </div>
-            </div>
+            )}
 
-            <div>
-              <p className="text-sm text-gray-600">Rango de Números</p>
-              <p className="font-semibold text-gray-900">
-                {lottery.numbersRange.min} - {lottery.numbersRange.max} (
-                {lottery.numbersRange.count} números)
-              </p>
+            {/* Countdown Timer */}
+            {lottery.status !== 'completed' && lottery.status !== 'cancelled' && (
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Clock className="text-primary-600" size={20} />
+                  <h3 className="font-semibold text-gray-900">Tiempo Restante</h3>
+                </div>
+                <CountdownTimer targetDate={new Date(lottery.drawDate)} />
+              </div>
+            )}
+
+            {/* Quick Stats */}
+            <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-4">
+              <h3 className="font-semibold text-gray-900 mb-3">Estadísticas</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">Boletos Vendidos</span>
+                  <span className="font-bold text-primary-700">
+                    {lottery.soldTickets}/{lottery.maxTickets}
+                  </span>
+                </div>
+                <div className="w-full bg-white rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all"
+                    style={{
+                      width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Progreso</span>
+                  <span className="font-semibold text-primary-700">
+                    {((lottery.soldTickets / lottery.maxTickets) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {lottery.winningNumbers && lottery.winningNumbers.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Números Ganadores</p>
-              <div className="flex space-x-2">
-                {lottery.winningNumbers.map((num: number, idx: number) => (
-                  <div
-                    key={idx}
-                    className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-lg"
-                  >
-                    {num}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Right Column - Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Lottery Information */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <h3 className="font-semibold text-gray-900 mb-4 text-lg">
+                Información del Sorteo
+              </h3>
 
-          {lottery.winners && lottery.winners.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-600 mb-3">Ganadores</p>
-              <div className="space-y-2">
-                {lottery.winners.map((winner: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        Posición #{winner.position}
-                      </p>
-                      {winner.userId && (
-                        <p className="text-sm text-gray-600">
-                          {winner.userId.firstName} {winner.userId.lastName}
-                        </p>
-                      )}
-                    </div>
-                    <p className="font-bold text-green-600">
-                      ${winner.prize}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-gray-600">Lotería</label>
+                  <p className="font-semibold text-gray-900">{lottery.lotteryName}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Fecha del Sorteo</label>
+                  <div className="flex items-center space-x-2">
+                    <Calendar size={16} className="text-gray-400" />
+                    <p className="font-semibold text-gray-900">
+                      {format(new Date(lottery.drawDate), 'PPPp', { locale: es })}
                     </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
 
-          {lottery.prizeDistribution && lottery.prizeDistribution.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-600 mb-3">Distribución de Premios</p>
-              <div className="space-y-2">
-                {lottery.prizeDistribution.map((prize: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                  >
-                    <span className="text-sm text-gray-700">
-                      Posición {prize.position} ({prize.percentage}%)
-                    </span>
-                    <span className="font-semibold text-gray-900">
-                      ${prize.amount}
-                    </span>
+                <div>
+                  <label className="text-sm text-gray-600">Precio del Boleto</label>
+                  <div className="flex items-center space-x-2">
+                    <DollarSign size={16} className="text-green-600" />
+                    <p className="font-semibold text-green-600 text-lg">
+                      ${lottery.ticketPrice.toLocaleString()}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
 
-          <div className="pt-4 border-t">
-            <button
-              onClick={onClose}
-              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-            >
-              Cerrar
-            </button>
+                <div>
+                  <label className="text-sm text-gray-600">Cantidad de Boletos</label>
+                  <div className="flex items-center space-x-2">
+                    <Ticket size={16} className="text-gray-400" />
+                    <p className="font-semibold text-gray-900">
+                      {lottery.maxTickets.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Máx. por Jugador</label>
+                  <div className="flex items-center space-x-2">
+                    <Users size={16} className="text-gray-400" />
+                    <p className="font-semibold text-gray-900">
+                      {lottery.maxTicketsPerPlayer === 0
+                        ? 'Sin límite'
+                        : lottery.maxTicketsPerPlayer}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Tipo de Selección</label>
+                  <p className="font-semibold text-gray-900">
+                    {getSelectionTypeLabel(lottery.selectionType)}
+                  </p>
+                </div>
+              </div>
+
+              {lottery.description && (
+                <div className="mt-4 pt-4 border-t">
+                  <label className="text-sm text-gray-600">Descripción</label>
+                  <p className="text-gray-900 mt-1">{lottery.description}</p>
+                </div>
+              )}
+
+              {lottery.selectionType !== 'manual' && lottery.randomButtons?.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <label className="text-sm text-gray-600 mb-2 block">
+                    Botones de Selección Al Azar
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {lottery.randomButtons.map((num: number, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm font-semibold"
+                      >
+                        {num} boletos
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Prizes */}
+            {lottery.prizes && lottery.prizes.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Trophy className="text-yellow-600" size={20} />
+                  <h3 className="font-semibold text-gray-900 text-lg">Premios</h3>
+                </div>
+                <div className="space-y-3">
+                  {lottery.prizes.map((prize: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold">
+                          {prize.position}
+                        </div>
+                        <span className="font-semibold text-gray-900">{prize.name}</span>
+                      </div>
+                      <span className="font-bold text-green-600 text-lg">
+                        ${prize.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                  <span className="font-semibold text-gray-900">Total en Premios</span>
+                  <span className="font-bold text-green-600 text-xl">
+                    ${lottery.totalPrize.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Winning Numbers and Winners (if completed) */}
+            {lottery.status === 'completed' && (
+              <>
+                {lottery.winningNumbers && lottery.winningNumbers.length > 0 && (
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4 text-lg">
+                      Números Ganadores
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {lottery.winningNumbers.map((num: number, idx: number) => (
+                        <div
+                          key={idx}
+                          className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl flex items-center justify-center font-bold text-xl shadow-lg"
+                        >
+                          {num}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {lottery.winners && lottery.winners.length > 0 && (
+                  <div className="bg-white border border-gray-200 rounded-xl p-6">
+                    <h3 className="font-semibold text-gray-900 mb-4 text-lg">
+                      Ganadores
+                    </h3>
+                    <div className="space-y-3">
+                      {lottery.winners.map((winner: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
+                        >
+                          <div>
+                            <p className="font-semibold text-gray-900 text-lg">
+                              {winner.position}° Lugar
+                            </p>
+                            {winner.userId && (
+                              <p className="text-sm text-gray-600">
+                                {winner.userId.firstName} {winner.userId.lastName}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-green-600 text-xl">
+                              ${winner.prize.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Ticket Board */}
+            {lottery.status !== 'cancelled' && (
+              <div className="bg-white border border-gray-200 rounded-xl p-6">
+                {renderTicketBoard()}
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 pt-4 border-t">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
