@@ -47,7 +47,7 @@ export const performDraw = async (lotteryId: string): Promise<ILottery> => {
   for (const prizeConfig of lottery.prizeDistribution) {
     const winningTicket = ticketsWithMatches.find(
       t => t.matches >= lottery.numbersRange.count - (prizeConfig.position - 1) &&
-      !winners.some(w => w.ticketId.toString() === t.ticket._id.toString())
+      !winners.some(w => String(w.ticketId) === String(t.ticket._id))
     );
 
     if (winningTicket) {
@@ -55,7 +55,7 @@ export const performDraw = async (lotteryId: string): Promise<ILottery> => {
 
       winners.push({
         userId: winningTicket.ticket.userId,
-        ticketId: winningTicket.ticket._id,
+        ticketId: winningTicket.ticket._id as any,
         prize,
         position: prizeConfig.position,
       });
@@ -94,7 +94,7 @@ export const performDraw = async (lotteryId: string): Promise<ILottery> => {
 
   // Actualizar boletos que no ganaron
   const losingTickets = tickets.filter(
-    ticket => !winners.some(w => w.ticketId.toString() === ticket._id.toString())
+    ticket => !winners.some(w => String(w.ticketId) === String(ticket._id))
   );
 
   for (const ticket of losingTickets) {

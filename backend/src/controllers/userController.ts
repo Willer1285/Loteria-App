@@ -72,7 +72,7 @@ export const updateUser = async (
     const updates = req.body;
 
     // Los usuarios normales solo pueden actualizarse a sí mismos
-    if (req.user?.role !== 'admin' && req.user?._id.toString() !== id) {
+    if (req.user?.role !== 'admin' && String(req.user?._id) !== id) {
       res.status(403).json({ error: 'No tienes permiso para actualizar este usuario' });
       return;
     }
@@ -172,10 +172,10 @@ export const getUserStats = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = req.params.id || req.user!._id;
+    const userId = req.params.id || String(req.user!._id);
 
     // Los usuarios normales solo pueden ver sus propias estadísticas
-    if (req.user?.role !== 'admin' && req.user?._id.toString() !== userId) {
+    if (req.user?.role !== 'admin' && String(req.user?._id) !== userId) {
       res.status(403).json({ error: 'No tienes permiso para ver estas estadísticas' });
       return;
     }

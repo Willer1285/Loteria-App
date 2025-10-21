@@ -37,9 +37,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Generar token
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
     const token = jwt.sign(
-      { userId: user._id.toString() },
+      { userId: String(user._id) },
       jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
     );
 
     res.status(201).json({
@@ -95,9 +95,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Generar token
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
     const token = jwt.sign(
-      { userId: user._id.toString() },
+      { userId: String(user._id) },
       jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
     );
 
     res.json({
