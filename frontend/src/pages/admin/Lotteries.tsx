@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { lotteryAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Search, Plus, Edit, Eye, Play, XCircle, Filter } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Play, XCircle, Filter, Trash2 } from 'lucide-react';
 import CreateLotteryModal from '../../components/admin/CreateLotteryModal';
 import EditLotteryModal from '../../components/admin/EditLotteryModal';
 import ManageLotteryModal from '../../components/admin/ManageLotteryModal';
@@ -82,6 +82,25 @@ const Lotteries = () => {
       loadLotteries();
     } catch (error) {
       toast.error('Error al cancelar sorteo');
+    }
+  };
+
+  const handleDeleteLottery = async (lotteryId: string, soldTickets: number) => {
+    if (soldTickets > 0) {
+      toast.error('No se puede eliminar un sorteo con boletos vendidos');
+      return;
+    }
+
+    if (!confirm('¿Estás seguro de eliminar este sorteo? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      await lotteryAPI.delete(lotteryId);
+      toast.success('Sorteo eliminado exitosamente');
+      loadLotteries();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al eliminar sorteo');
     }
   };
 
@@ -246,13 +265,23 @@ const Lotteries = () => {
                     <span>Ver</span>
                   </button>
 
-                  {lottery.status === 'active' && lottery.soldTickets === 0 && (
+                  {lottery.status !== 'completed' && (
                     <button
                       onClick={() => setSelectedLotteryForEdit(lottery)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                     >
                       <Edit size={16} />
                       <span>Editar</span>
+                    </button>
+                  )}
+
+                  {lottery.soldTickets === 0 && lottery.status !== 'completed' && (
+                    <button
+                      onClick={() => handleDeleteLottery(lottery._id, lottery.soldTickets)}
+                      className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                      <span>Eliminar</span>
                     </button>
                   )}
 
@@ -267,7 +296,7 @@ const Lotteries = () => {
                       </button>
                       <button
                         onClick={() => handleCancelLottery(lottery._id)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
                       >
                         <XCircle size={16} />
                         <span>Cancelar</span>
