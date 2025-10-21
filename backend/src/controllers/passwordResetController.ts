@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import crypto from 'crypto';
 import User from '../models/User';
 import { validationResult } from 'express-validator';
+import { emailService } from '../services/emailService';
 
 /**
  * Solicita un reseteo de contraseña
@@ -42,16 +43,28 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hora
     await user.save();
 
-    // En producción, aquí enviarías un email con el token
-    // Por ahora, lo devolvemos en la respuesta (SOLO PARA DESARROLLO)
-    console.log('🔑 Token de reseteo de contraseña:', resetToken);
-    console.log('📧 Usuario:', user.email);
+    // Enviar email con el token
+    const userName = `${user.firstName} ${user.lastName}`;
+    const emailSent = await emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      userName
+    );
 
+    if (!emailSent) {
+      console.error('⚠️  Error enviando email de recuperación');
+    }
+
+    // Respuesta genérica por seguridad
     res.json({
       message: 'Si el correo existe, recibirás un enlace de recuperación.',
-      // SOLO PARA DESARROLLO - Remover en producción
-      resetToken: resetToken,
-      resetUrl: `http://localhost:3000/reset-password/${resetToken}`,
+      // SOLO EN DESARROLLO: Si no hay servicio de email configurado, devolver token
+      ...(process.env.NODE_ENV === 'development' && !process.env.EMAIL_USER
+        ? {
+            resetToken: resetToken,
+            resetUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`,
+          }
+        : {}),
     });
   } catch (error) {
     console.error(error);
