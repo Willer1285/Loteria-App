@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Lotteries from './pages/Lotteries';
+import PublicLotteries from './pages/PublicLotteries';
 import MyTickets from './pages/MyTickets';
 import VerifyTicket from './pages/VerifyTicket';
 import Rankings from './pages/Rankings';
@@ -40,9 +41,12 @@ function App() {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<PublicLotteries />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Private Routes */}
           <Route
             path="/dashboard"
             element={
@@ -114,8 +118,6 @@ function App() {
               </PrivateRoute>
             }
           />
-
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

@@ -26,9 +26,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Only redirect to login if we're not already on a public page
+      const publicPaths = ['/', '/login', '/register'];
+      const currentPath = window.location.pathname;
+
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+
+      if (!publicPaths.includes(currentPath)) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
