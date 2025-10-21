@@ -11,6 +11,7 @@ import Users from './pages/admin/Users';
 import AdminLotteries from './pages/admin/Lotteries';
 import AdminTickets from './pages/admin/Tickets';
 import AdminPayments from './pages/admin/Payments';
+import EmailTemplates from './pages/admin/EmailTemplates';
 import Settings from './pages/admin/Settings';
 import Lotteries from './pages/Lotteries';
 import PublicLotteries from './pages/PublicLotteries';
@@ -115,6 +116,15 @@ function App() {
             element={
               <PrivateRoute adminOnly>
                 <AdminPayments />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/email-templates"
+            element={
+              <PrivateRoute adminOnly>
+                <EmailTemplates />
               </PrivateRoute>
             }
           />

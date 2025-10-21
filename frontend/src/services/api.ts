@@ -155,3 +155,12 @@ export const settingsAPI = {
   deletePaymentMethod: (index: number) =>
     api.delete(`/settings/payment-methods/${index}`),
 };
+
+// Email Template API
+export const emailTemplateAPI = {
+  getAll: () => api.get('/email-templates'),
+  getByType: (type: string) => api.get(`/email-templates/${type}`),
+  upsert: (type: string, data: any) => api.post(`/email-templates/${type}`, data),
+  delete: (type: string) => api.delete(`/email-templates/${type}`),
+  toggle: (type: string) => api.patch(`/email-templates/${type}/toggle`),
+};
