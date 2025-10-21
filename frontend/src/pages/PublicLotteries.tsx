@@ -4,9 +4,60 @@ import PublicLayout from '../components/PublicLayout';
 import { lotteryAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Calendar, DollarSign, Ticket as TicketIcon, Trophy, Lock } from 'lucide-react';
+import { Calendar, DollarSign, Ticket as TicketIcon, Trophy, Lock, Clock, ArrowRight } from 'lucide-react';
+
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime();
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="grid grid-cols-4 gap-2 text-center">
+      <div className="bg-white bg-opacity-90 rounded-lg p-2">
+        <div className="text-2xl font-bold text-primary-600">{timeLeft.days}</div>
+        <div className="text-xs text-gray-600">Días</div>
+      </div>
+      <div className="bg-white bg-opacity-90 rounded-lg p-2">
+        <div className="text-2xl font-bold text-primary-600">{timeLeft.hours}</div>
+        <div className="text-xs text-gray-600">Hrs</div>
+      </div>
+      <div className="bg-white bg-opacity-90 rounded-lg p-2">
+        <div className="text-2xl font-bold text-primary-600">{timeLeft.minutes}</div>
+        <div className="text-xs text-gray-600">Min</div>
+      </div>
+      <div className="bg-white bg-opacity-90 rounded-lg p-2">
+        <div className="text-2xl font-bold text-primary-600">{timeLeft.seconds}</div>
+        <div className="text-xs text-gray-600">Seg</div>
+      </div>
+    </div>
+  );
+};
 
 const PublicLotteries = () => {
   const { user } = useAuth();
@@ -29,13 +80,8 @@ const PublicLotteries = () => {
     }
   };
 
-  const handleBuyClick = (lottery: any) => {
-    if (!user) {
-      toast.error('Debes iniciar sesión para comprar boletos');
-      navigate('/login', { state: { from: '/', lotteryId: lottery._id } });
-      return;
-    }
-    navigate('/lotteries');
+  const handleViewLottery = (lotteryId: string) => {
+    navigate(`/lottery/${lotteryId}`);
   };
 
   if (loading) {
@@ -52,8 +98,16 @@ const PublicLotteries = () => {
     <PublicLayout>
       <div className="space-y-8">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-primary-500 to-primary-700 rounded-2xl shadow-lg p-8 md:p-12 text-white">
-          <div className="max-w-3xl">
+        <div className="bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 rounded-2xl shadow-2xl p-8 md:p-12 text-white relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-full h-full" style={{
+              backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+              backgroundSize: '20px 20px'
+            }}></div>
+          </div>
+
+          <div className="relative z-10 max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               ¡Tu suerte comienza aquí!
             </h1>
@@ -64,13 +118,13 @@ const PublicLotteries = () => {
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => navigate('/register')}
-                  className="px-6 py-3 bg-white text-primary-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  className="px-6 py-3 bg-white text-primary-600 rounded-lg font-semibold hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   Registrarse Gratis
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-6 py-3 bg-primary-800 text-white rounded-lg font-semibold hover:bg-primary-900 transition-colors border-2 border-white"
+                  className="px-6 py-3 bg-primary-800 text-white rounded-lg font-semibold hover:bg-primary-900 transition-all border-2 border-white"
                 >
                   Iniciar Sesión
                 </button>
@@ -81,25 +135,25 @@ const PublicLotteries = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6 text-center">
-            <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <Trophy className="text-primary-600" size={24} />
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-6 text-center border border-gray-100 hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy className="text-primary-600" size={28} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900">100% Seguro</h3>
             <p className="text-gray-600 mt-2">Sorteos verificables y transparentes</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <DollarSign className="text-green-600" size={24} />
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-6 text-center border border-gray-100 hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <DollarSign className="text-green-600" size={28} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900">Pago Automático</h3>
             <p className="text-gray-600 mt-2">Recibe tus premios al instante</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <TicketIcon className="text-blue-600" size={24} />
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md p-6 text-center border border-gray-100 hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TicketIcon className="text-blue-600" size={28} />
             </div>
             <h3 className="text-2xl font-bold text-gray-900">Fácil y Rápido</h3>
             <p className="text-gray-600 mt-2">Compra boletos en segundos</p>
@@ -108,105 +162,169 @@ const PublicLotteries = () => {
 
         {/* Lotteries Section */}
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center">
+            <Clock className="mr-3 text-primary-600" size={32} />
             Sorteos Activos
           </h2>
 
           {lotteries.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {lotteries.map((lottery) => (
-                <div
-                  key={lottery._id}
-                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary-200"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {lotteries.map((lottery) => {
+                const remainingTickets = lottery.maxTickets - lottery.soldTickets;
+                const soldPercentage = (lottery.soldTickets / lottery.maxTickets) * 100;
+
+                return (
+                  <div
+                    key={lottery._id}
+                    className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-primary-300 transform hover:-translate-y-1"
+                  >
+                    {/* Image Section */}
+                    {lottery.image ? (
+                      <div className="relative h-48 overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200">
+                        <img
+                          src={lottery.image}
+                          alt={lottery.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute top-3 right-3">
+                          <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold shadow-lg">
+                            ACTIVO
+                          </span>
+                        </div>
+                        {/* Prize Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                          <div className="flex items-center space-x-2 text-white">
+                            <Trophy size={20} />
+                            <span className="font-bold text-lg">
+                              ${lottery.totalPrize.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                        <Trophy className="text-white/30" size={80} />
+                        <div className="absolute top-3 right-3">
+                          <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold shadow-lg">
+                            ACTIVO
+                          </span>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                          <div className="flex items-center space-x-2 text-white">
+                            <Trophy size={20} />
+                            <span className="font-bold text-lg">
+                              ${lottery.totalPrize.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Content Section */}
+                    <div className="p-6">
+                      {/* Title */}
+                      <h3 className="text-xl font-bold text-gray-900 mb-1 line-clamp-2">
                         {lottery.name}
                       </h3>
-                      <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                        {lottery.status === 'active' ? 'ACTIVO' : lottery.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <Trophy className="text-yellow-500" size={32} />
-                  </div>
+                      {lottery.lotteryName && (
+                        <p className="text-sm text-primary-600 font-semibold mb-3">
+                          {lottery.lotteryName}
+                        </p>
+                      )}
 
-                  <p className="text-gray-600 mb-4">{lottery.description}</p>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2 text-sm">
-                      <Calendar className="text-gray-400" size={16} />
-                      <span className="text-gray-600">
-                        Sorteo: {format(new Date(lottery.drawDate), 'PPP p', { locale: es })}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm">
-                      <DollarSign className="text-gray-400" size={16} />
-                      <span className="text-gray-600">
-                        Precio por boleto:{' '}
-                        <span className="font-semibold text-gray-900">
-                          ${lottery.ticketPrice}
-                        </span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm">
-                      <Trophy className="text-gray-400" size={16} />
-                      <span className="text-gray-600">
-                        Premio total:{' '}
-                        <span className="font-semibold text-green-600 text-lg">
-                          ${lottery.totalPrize}
-                        </span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-sm">
-                      <TicketIcon className="text-gray-400" size={16} />
-                      <span className="text-gray-600">
-                        Disponibles: {lottery.maxTickets - lottery.soldTickets} de{' '}
-                        {lottery.maxTickets}
-                      </span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="pt-2">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Vendidos</span>
-                        <span>{Math.round((lottery.soldTickets / lottery.maxTickets) * 100)}%</span>
+                      {/* Countdown Timer */}
+                      <div className="mb-4 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-3">
+                        <p className="text-xs text-gray-700 font-semibold mb-2 flex items-center">
+                          <Clock size={14} className="mr-1" />
+                          Tiempo Restante
+                        </p>
+                        <CountdownTimer targetDate={new Date(lottery.drawDate)} />
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-600 h-2 rounded-full transition-all"
-                          style={{
-                            width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
-                          }}
-                        />
+
+                      {/* Description */}
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                        {lottery.description}
+                      </p>
+
+                      {/* Info Grid */}
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center space-x-1 text-xs text-gray-500 mb-1">
+                            <DollarSign size={12} />
+                            <span>Precio</span>
+                          </div>
+                          <p className="font-bold text-gray-900">
+                            ${lottery.ticketPrice}
+                          </p>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center space-x-1 text-xs text-gray-500 mb-1">
+                            <TicketIcon size={12} />
+                            <span>Disponibles</span>
+                          </div>
+                          <p className="font-bold text-gray-900">
+                            {remainingTickets.toLocaleString()}
+                          </p>
+                        </div>
                       </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="flex justify-between text-xs text-gray-600 mb-1">
+                          <span>Vendidos</span>
+                          <span className="font-semibold">{soldPercentage.toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className="bg-gradient-to-r from-primary-500 to-primary-600 h-2.5 rounded-full transition-all shadow-sm"
+                            style={{ width: `${soldPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Draw Date */}
+                      <div className="flex items-center space-x-2 text-xs text-gray-500 mb-4 bg-gray-50 rounded-lg p-2">
+                        <Calendar size={14} />
+                        <span>
+                          {new Date(lottery.drawDate).toLocaleDateString('es-ES', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+
+                      {/* Action Button */}
+                      <button
+                        onClick={() => handleViewLottery(lottery._id)}
+                        className={`w-full py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 ${
+                          remainingTickets > 0
+                            ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800'
+                            : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                        }`}
+                        disabled={remainingTickets === 0}
+                      >
+                        {!user && remainingTickets > 0 && <Lock size={18} />}
+                        <span>
+                          {remainingTickets === 0
+                            ? 'Agotado'
+                            : user
+                            ? 'Ver Sorteo'
+                            : 'Iniciar Sesión'}
+                        </span>
+                        {remainingTickets > 0 && <ArrowRight size={18} />}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="mt-6 pt-4 border-t">
-                    <button
-                      onClick={() => handleBuyClick(lottery)}
-                      className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-                      disabled={lottery.soldTickets >= lottery.maxTickets}
-                    >
-                      {!user && <Lock size={20} />}
-                      <span>
-                        {lottery.soldTickets >= lottery.maxTickets
-                          ? 'Agotado'
-                          : user
-                          ? 'Comprar Boleto'
-                          : 'Iniciar Sesión para Comprar'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-md p-12 text-center">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-md p-12 text-center border border-gray-200">
               <TicketIcon className="mx-auto text-gray-400 mb-4" size={64} />
               <p className="text-gray-500 text-lg mb-4">
                 No hay sorteos disponibles en este momento
@@ -220,16 +338,16 @@ const PublicLotteries = () => {
 
         {/* Call to Action */}
         {!user && lotteries.length > 0 && (
-          <div className="bg-primary-50 rounded-xl p-8 text-center border-2 border-primary-200">
+          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8 text-center border-2 border-primary-200 shadow-lg">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
               ¿Listo para ganar?
             </h3>
-            <p className="text-gray-600 mb-6">
-              Regístrate ahora y recibe un bono de bienvenida para tu primera compra
+            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+              Regístrate ahora y comienza a participar en nuestros sorteos seguros y transparentes
             </p>
             <button
               onClick={() => navigate('/register')}
-              className="px-8 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-semibold hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Crear Cuenta Gratis
             </button>
