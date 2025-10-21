@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Users from './pages/admin/Users';
 import AdminLotteries from './pages/admin/Lotteries';
+import AdminTickets from './pages/admin/Tickets';
+import AdminPayments from './pages/admin/Payments';
 import Settings from './pages/admin/Settings';
 import Lotteries from './pages/Lotteries';
 import PublicLotteries from './pages/PublicLotteries';
@@ -95,6 +97,24 @@ function App() {
             element={
               <PrivateRoute adminOnly>
                 <AdminLotteries />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/tickets"
+            element={
+              <PrivateRoute adminOnly>
+                <AdminTickets />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/payments"
+            element={
+              <PrivateRoute adminOnly>
+                <AdminPayments />
               </PrivateRoute>
             }
           />

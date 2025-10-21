@@ -1,0 +1,511 @@
+import { useEffect, useState } from 'react';
+import AdminLayout from '../../components/AdminLayout';
+import { ticketAPI } from '../../services/api';
+import toast from 'react-hot-toast';
+import { Search, Filter, Calendar, User, Ticket, FileText, Download } from 'lucide-react';
+
+const Tickets = () => {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    startDate: '',
+    endDate: '',
+    userName: '',
+    ticketNumber: '',
+    lotteryName: '',
+    controlNumber: '',
+  });
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
+  useEffect(() => {
+    filterTickets();
+  }, [tickets, filters]);
+
+  const loadTickets = async () => {
+    try {
+      // Get all tickets (admin view)
+      const response = await ticketAPI.getUserTickets({ limit: 1000 });
+      setTickets(response.data.tickets || []);
+    } catch (error) {
+      toast.error('Error al cargar boletos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterTickets = () => {
+    let filtered = [...tickets];
+
+    // Search term (general search across multiple fields)
+    if (filters.searchTerm) {
+      const term = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (ticket) =>
+          ticket.ticketNumber?.toLowerCase().includes(term) ||
+          ticket.userId?.firstName?.toLowerCase().includes(term) ||
+          ticket.userId?.lastName?.toLowerCase().includes(term) ||
+          ticket.userId?.email?.toLowerCase().includes(term) ||
+          ticket.lotteryId?.name?.toLowerCase().includes(term) ||
+          ticket.lotteryId?.controlNumber?.toLowerCase().includes(term)
+      );
+    }
+
+    // Date range
+    if (filters.startDate) {
+      filtered = filtered.filter(
+        (ticket) =>
+          new Date(ticket.purchaseDate) >= new Date(filters.startDate)
+      );
+    }
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(
+        (ticket) => new Date(ticket.purchaseDate) <= endDate
+      );
+    }
+
+    // User name
+    if (filters.userName) {
+      const term = filters.userName.toLowerCase();
+      filtered = filtered.filter(
+        (ticket) =>
+          ticket.userId?.firstName?.toLowerCase().includes(term) ||
+          ticket.userId?.lastName?.toLowerCase().includes(term) ||
+          ticket.userId?.email?.toLowerCase().includes(term)
+      );
+    }
+
+    // Ticket number
+    if (filters.ticketNumber) {
+      const term = filters.ticketNumber.toLowerCase();
+      filtered = filtered.filter((ticket) =>
+        ticket.ticketNumber?.toLowerCase().includes(term)
+      );
+    }
+
+    // Lottery name
+    if (filters.lotteryName) {
+      const term = filters.lotteryName.toLowerCase();
+      filtered = filtered.filter((ticket) =>
+        ticket.lotteryId?.name?.toLowerCase().includes(term)
+      );
+    }
+
+    // Control number
+    if (filters.controlNumber) {
+      const term = filters.controlNumber.toLowerCase();
+      filtered = filtered.filter((ticket) =>
+        ticket.lotteryId?.controlNumber?.toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredTickets(filtered);
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters({
+      ...filters,
+      [field]: value,
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      searchTerm: '',
+      startDate: '',
+      endDate: '',
+      userName: '',
+      ticketNumber: '',
+      lotteryName: '',
+      controlNumber: '',
+    });
+  };
+
+  const handleExport = () => {
+    // Basic CSV export
+    const csvContent = [
+      [
+        'Número de Boleto',
+        'Usuario',
+        'Email',
+        'Sorteo',
+        'Número de Control',
+        'Números',
+        'Fecha de Compra',
+        'Monto',
+        'Estado',
+      ],
+      ...filteredTickets.map((ticket) => [
+        ticket.ticketNumber || 'N/A',
+        `${ticket.userId?.firstName || ''} ${ticket.userId?.lastName || ''}`,
+        ticket.userId?.email || 'N/A',
+        ticket.lotteryId?.name || 'N/A',
+        ticket.lotteryId?.controlNumber || 'N/A',
+        ticket.numbers?.join(', ') || 'N/A',
+        new Date(ticket.purchaseDate).toLocaleString(),
+        `$${ticket.amount}`,
+        ticket.status || 'active',
+      ]),
+    ]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tickets_${new Date().toISOString()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success('Exportación completada');
+  };
+
+  const calculateStats = () => {
+    const totalTickets = filteredTickets.length;
+    const totalAmount = filteredTickets.reduce(
+      (sum, ticket) => sum + (ticket.amount || 0),
+      0
+    );
+    const uniqueUsers = new Set(
+      filteredTickets.map((ticket) => ticket.userId?._id)
+    ).size;
+    const uniqueLotteries = new Set(
+      filteredTickets.map((ticket) => ticket.lotteryId?._id)
+    ).size;
+
+    return { totalTickets, totalAmount, uniqueUsers, uniqueLotteries };
+  };
+
+  const stats = calculateStats();
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Gestión de Ventas de Boletos
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Administra y filtra todas las ventas de boletos
+            </p>
+          </div>
+          <button
+            onClick={handleExport}
+            className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
+          >
+            <Download size={20} />
+            <span>Exportar CSV</span>
+          </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Boletos</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.totalTickets}
+                </p>
+              </div>
+              <Ticket className="text-primary-600" size={32} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Ingresos Totales</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  ${stats.totalAmount.toFixed(2)}
+                </p>
+              </div>
+              <FileText className="text-green-600" size={32} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Usuarios Únicos</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.uniqueUsers}
+                </p>
+              </div>
+              <User className="text-blue-600" size={32} />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Sorteos Activos</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {stats.uniqueLotteries}
+                </p>
+              </div>
+              <Calendar className="text-yellow-600" size={32} />
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
+              <Filter size={20} />
+              <span>Filtros</span>
+            </h2>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* General Search */}
+            <div className="md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Búsqueda General
+              </label>
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  placeholder="Buscar por usuario, boleto, sorteo..."
+                  value={filters.searchTerm}
+                  onChange={(e) =>
+                    handleFilterChange('searchTerm', e.target.value)
+                  }
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+
+            {/* Date Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha Inicial
+              </label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  handleFilterChange('startDate', e.target.value)
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Fecha Final
+              </label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre de Usuario
+              </label>
+              <input
+                type="text"
+                placeholder="Juan Pérez"
+                value={filters.userName}
+                onChange={(e) => handleFilterChange('userName', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Número de Boleto
+              </label>
+              <input
+                type="text"
+                placeholder="TKT-123"
+                value={filters.ticketNumber}
+                onChange={(e) =>
+                  handleFilterChange('ticketNumber', e.target.value)
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre del Sorteo
+              </label>
+              <input
+                type="text"
+                placeholder="Gran Sorteo"
+                value={filters.lotteryName}
+                onChange={(e) =>
+                  handleFilterChange('lotteryName', e.target.value)
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Número de Control
+              </label>
+              <input
+                type="text"
+                placeholder="LOT-2024-001"
+                value={filters.controlNumber}
+                onChange={(e) =>
+                  handleFilterChange('controlNumber', e.target.value)
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Results Count */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600">
+            Mostrando {filteredTickets.length} de {tickets.length} boletos
+          </p>
+        </div>
+
+        {/* Tickets Table */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Boleto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Usuario
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Sorteo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Números
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Monto
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredTickets.map((ticket) => (
+                  <tr key={ticket._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {ticket.ticketNumber || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {ticket.userId?.firstName} {ticket.userId?.lastName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {ticket.userId?.email}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {ticket.lotteryId?.name || 'N/A'}
+                        </div>
+                        {ticket.lotteryId?.controlNumber && (
+                          <div className="text-sm text-gray-500">
+                            {ticket.lotteryId.controlNumber}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {ticket.numbers && ticket.numbers.length > 0 ? (
+                          ticket.numbers.map((num: number, idx: number) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-semibold rounded"
+                            >
+                              {num}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-gray-500">
+                            Aleatorio
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(ticket.purchaseDate).toLocaleDateString()}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(ticket.purchaseDate).toLocaleTimeString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-green-600">
+                        ${ticket.amount?.toFixed(2)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {filteredTickets.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">
+                  No se encontraron boletos
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default Tickets;
