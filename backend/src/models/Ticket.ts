@@ -77,7 +77,5 @@ const TicketSchema = new Schema<ITicket>(
 
 // Index for faster queries
 TicketSchema.index({ userId: 1, lotteryId: 1 });
-TicketSchema.index({ verificationCode: 1 });
-TicketSchema.index({ ticketNumber: 1 });
 
 export default mongoose.model<ITicket>('Ticket', TicketSchema);
