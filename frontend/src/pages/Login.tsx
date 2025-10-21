@@ -17,7 +17,8 @@ const Login = () => {
 
     try {
       const user = await login(email, password);
-      if (user.role === 'admin') {
+      // Redirigir según el rol
+      if (user.role === 'admin' || user.role === 'gerente') {
         navigate('/admin');
       } else {
         navigate('/dashboard');

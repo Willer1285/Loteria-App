@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import Layout from '../../components/Layout';
+import AdminLayout from '../../components/AdminLayout';
 import { lotteryAPI, userAPI, rankingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Users, Ticket, DollarSign, TrendingUp, Plus } from 'lucide-react';
@@ -66,30 +66,21 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <AdminLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
   return (
-    <Layout>
+    <AdminLayout>
       <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Panel de Administración
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Gestiona sorteos, usuarios y visualiza estadísticas
-            </p>
-          </div>
-
+        <div className="flex justify-end items-center">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+            className="flex items-center space-x-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg"
           >
             <Plus size={20} />
             <span>Crear Sorteo</span>
@@ -320,7 +311,7 @@ const AdminDashboard = () => {
           />
         )}
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

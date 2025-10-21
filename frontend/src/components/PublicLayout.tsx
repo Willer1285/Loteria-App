@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Ticket, User, LogIn } from 'lucide-react';
+import { Ticket, User, LogIn, Menu, X, Trophy, BarChart2 } from 'lucide-react';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -8,6 +9,7 @@ interface PublicLayoutProps {
 
 const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
   const { user } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -17,32 +19,45 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <Ticket className="text-primary-600" size={32} />
-              <div>
-                <h1 className="text-2xl font-bold text-primary-600">Lotería App</h1>
+              <Ticket className="text-primary-600" size={28} />
+              <div className="hidden sm:block">
+                <h1 className="text-xl sm:text-2xl font-bold text-primary-600">Lotería App</h1>
                 <p className="text-xs text-gray-600">Tu suerte te espera</p>
               </div>
+              <h1 className="sm:hidden text-xl font-bold text-primary-600">Lotería App</h1>
             </Link>
 
-            {/* Navigation */}
-            <nav className="flex items-center space-x-6">
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center space-x-6">
               <Link
                 to="/"
                 className="text-gray-700 hover:text-primary-600 font-medium transition-colors"
               >
                 Sorteos
               </Link>
+              <Link
+                to="/results"
+                className="flex items-center space-x-1 text-gray-700 hover:text-primary-600 font-medium transition-colors"
+              >
+                <Trophy size={18} />
+                <span>Resultados</span>
+              </Link>
+              <Link
+                to="/rankings"
+                className="flex items-center space-x-1 text-gray-700 hover:text-primary-600 font-medium transition-colors"
+              >
+                <BarChart2 size={18} />
+                <span>Rankings</span>
+              </Link>
 
               {user ? (
-                <>
-                  <Link
-                    to="/dashboard"
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    <User size={20} />
-                    <span>Mi Cuenta</span>
-                  </Link>
-                </>
+                <Link
+                  to="/dashboard"
+                  className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <User size={20} />
+                  <span>Mi Cuenta</span>
+                </Link>
               ) : (
                 <>
                   <Link
@@ -61,7 +76,75 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
                 </>
               )}
             </nav>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
+
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="lg:hidden py-4 border-t border-gray-200 animate-fade-in">
+              <nav className="flex flex-col space-y-4">
+                <Link
+                  to="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-gray-700 hover:text-primary-600 font-medium transition-colors py-2"
+                >
+                  Sorteos
+                </Link>
+                <Link
+                  to="/results"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors py-2"
+                >
+                  <Trophy size={18} />
+                  <span>Resultados</span>
+                </Link>
+                <Link
+                  to="/rankings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors py-2"
+                >
+                  <BarChart2 size={18} />
+                  <span>Rankings</span>
+                </Link>
+
+                {user ? (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center space-x-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  >
+                    <User size={20} />
+                    <span>Mi Cuenta</span>
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-2 px-4 py-3 text-gray-700 hover:text-primary-600 font-medium transition-colors border border-gray-300 rounded-lg"
+                    >
+                      <LogIn size={20} />
+                      <span>Iniciar Sesión</span>
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-center"
+                    >
+                      Registrarse
+                    </Link>
+                  </>
+                )}
+              </nav>
+            </div>
+          )}
         </div>
       </header>
 

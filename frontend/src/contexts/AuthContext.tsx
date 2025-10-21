@@ -7,8 +7,18 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'gerente' | 'jugador';
   balance: number;
+  avatar?: string;
+  permissions?: {
+    canManageLotteries: boolean;
+    canManageUsers: boolean;
+    canManagePayments: boolean;
+    canManageTickets: boolean;
+    canManageEmails: boolean;
+    canManageSettings: boolean;
+    canViewReports: boolean;
+  };
 }
 
 interface AuthContextType {
