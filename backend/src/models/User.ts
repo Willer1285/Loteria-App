@@ -6,9 +6,13 @@ export interface IUser extends Document {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'gerente' | 'jugador';
   balance: number;
   isActive: boolean;
+  isBanned: boolean;
+  bannedReason?: string;
+  bannedAt?: Date;
+  avatar?: string;
   phone?: string;
   address?: string;
   totalSpent: number;
@@ -16,6 +20,16 @@ export interface IUser extends Document {
   ticketsPurchased: number;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  // Permisos para gerente
+  permissions?: {
+    canManageLotteries: boolean;
+    canManageUsers: boolean;
+    canManagePayments: boolean;
+    canManageTickets: boolean;
+    canManageEmails: boolean;
+    canManageSettings: boolean;
+    canViewReports: boolean;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -47,8 +61,8 @@ const UserSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['admin', 'user'],
-      default: 'user',
+      enum: ['admin', 'gerente', 'jugador'],
+      default: 'jugador',
     },
     balance: {
       type: Number,
@@ -58,6 +72,19 @@ const UserSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
+    bannedReason: {
+      type: String,
+    },
+    bannedAt: {
+      type: Date,
+    },
+    avatar: {
+      type: String,
     },
     phone: {
       type: String,
@@ -87,6 +114,18 @@ const UserSchema = new Schema<IUser>(
     },
     resetPasswordExpires: {
       type: Date,
+    },
+    permissions: {
+      type: {
+        canManageLotteries: { type: Boolean, default: false },
+        canManageUsers: { type: Boolean, default: false },
+        canManagePayments: { type: Boolean, default: false },
+        canManageTickets: { type: Boolean, default: false },
+        canManageEmails: { type: Boolean, default: false },
+        canManageSettings: { type: Boolean, default: false },
+        canViewReports: { type: Boolean, default: false },
+      },
+      default: undefined,
     },
   },
   {

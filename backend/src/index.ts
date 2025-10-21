@@ -11,6 +11,8 @@ import ticketRoutes from './routes/ticketRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import rankingRoutes from './routes/rankingRoutes';
 import userRoutes from './routes/userRoutes';
+import settingsRoutes from './routes/settingsRoutes';
+import emailTemplateRoutes from './routes/emailTemplateRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +43,8 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/rankings', rankingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/email-templates', emailTemplateRoutes);
 
 // Error handling
 app.use(notFound);

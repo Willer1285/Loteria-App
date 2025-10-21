@@ -10,6 +10,7 @@ export interface IPayment extends Document {
   ticketId?: mongoose.Types.ObjectId;
   lotteryId?: mongoose.Types.ObjectId;
   description: string;
+  proofOfPayment?: string; // URL de la imagen del comprobante
   metadata?: {
     cardLast4?: string;
     bankName?: string;
@@ -62,6 +63,9 @@ const PaymentSchema = new Schema<IPayment>(
     description: {
       type: String,
       required: true,
+    },
+    proofOfPayment: {
+      type: String,
     },
     metadata: {
       type: Schema.Types.Mixed,

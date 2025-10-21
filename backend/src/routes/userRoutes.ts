@@ -6,8 +6,14 @@ import {
   deactivateUser,
   activateUser,
   getUserStats,
+  createUser,
+  banUser,
+  unbanUser,
+  getBannedUsers,
+  deleteUser,
+  updateAvatar,
 } from '../controllers/userController';
-import { authenticate, isAdmin } from '../middlewares/auth';
+import { authenticate, isAdmin, isAdminOrGerente } from '../middlewares/auth';
 
 const router = Router();
 
@@ -52,5 +58,47 @@ router.post('/:id/activate', authenticate, isAdmin, activateUser);
  * @access  Private
  */
 router.get('/:id/stats', authenticate, getUserStats);
+
+/**
+ * @route   POST /api/users
+ * @desc    Crea un nuevo usuario
+ * @access  Private/Admin or Gerente
+ */
+router.post('/', authenticate, isAdminOrGerente, createUser);
+
+/**
+ * @route   POST /api/users/:id/ban
+ * @desc    Banea un usuario
+ * @access  Private/Admin or Gerente
+ */
+router.post('/:id/ban', authenticate, isAdminOrGerente, banUser);
+
+/**
+ * @route   POST /api/users/:id/unban
+ * @desc    Desbanea/Restaura un usuario
+ * @access  Private/Admin or Gerente
+ */
+router.post('/:id/unban', authenticate, isAdminOrGerente, unbanUser);
+
+/**
+ * @route   GET /api/users/banned/list
+ * @desc    Obtiene todos los usuarios baneados
+ * @access  Private/Admin or Gerente
+ */
+router.get('/banned/list', authenticate, isAdminOrGerente, getBannedUsers);
+
+/**
+ * @route   DELETE /api/users/:id
+ * @desc    Elimina un usuario permanentemente
+ * @access  Private/Admin
+ */
+router.delete('/:id', authenticate, isAdmin, deleteUser);
+
+/**
+ * @route   PUT /api/users/:id/avatar
+ * @desc    Actualiza el avatar de un usuario
+ * @access  Private
+ */
+router.put('/:id/avatar', authenticate, updateAvatar);
 
 export default router;

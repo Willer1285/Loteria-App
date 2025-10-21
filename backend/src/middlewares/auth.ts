@@ -47,3 +47,36 @@ export const isAdmin = (
   }
   next();
 };
+
+export const isAdminOrGerente = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'gerente') {
+    res.status(403).json({ error: 'Acceso denegado. Se requieren privilegios de administrador o gerente.' });
+    return;
+  }
+  next();
+};
+
+export const hasPermission = (permission: string) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    // Admin siempre tiene todos los permisos
+    if (req.user?.role === 'admin') {
+      next();
+      return;
+    }
+
+    // Gerente debe tener el permiso específico
+    if (req.user?.role === 'gerente' && req.user.permissions) {
+      const permissions = req.user.permissions as any;
+      if (permissions[permission]) {
+        next();
+        return;
+      }
+    }
+
+    res.status(403).json({ error: 'No tienes permiso para realizar esta acción.' });
+  };
+};

@@ -1,8 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILottery extends Document {
+  controlNumber: string; // Número de control único del sorteo
   name: string;
   description: string;
+  image?: string; // Imagen del sorteo
   ticketPrice: number;
   totalPrize: number;
   drawDate: Date;
@@ -33,6 +35,12 @@ export interface ILottery extends Document {
 
 const LotterySchema = new Schema<ILottery>(
   {
+    controlNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
     name: {
       type: String,
       required: true,
@@ -41,6 +49,9 @@ const LotterySchema = new Schema<ILottery>(
     description: {
       type: String,
       required: true,
+    },
+    image: {
+      type: String,
     },
     ticketPrice: {
       type: Number,
