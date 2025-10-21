@@ -58,6 +58,15 @@ export const authAPI = {
   }) => api.post('/auth/register', data),
 
   getProfile: () => api.get('/auth/profile'),
+
+  forgotPassword: (email: string) =>
+    api.post('/auth/forgot-password', { email }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post('/auth/reset-password', { token, newPassword }),
+
+  verifyResetToken: (token: string) =>
+    api.get(`/auth/verify-reset-token/${token}`),
 };
 
 // Lottery API

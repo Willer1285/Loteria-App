@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { register, login, getProfile } from '../controllers/authController';
+import {
+  forgotPassword,
+  resetPassword,
+  verifyResetToken,
+} from '../controllers/passwordResetController';
 import { authenticate } from '../middlewares/auth';
 
 const router = Router();
@@ -41,5 +46,39 @@ router.post(
  * @access  Private
  */
 router.get('/profile', authenticate, getProfile);
+
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Solicita reseteo de contraseña
+ * @access  Public
+ */
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().withMessage('Email inválido')],
+  forgotPassword
+);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Resetea la contraseña con token
+ * @access  Public
+ */
+router.post(
+  '/reset-password',
+  [
+    body('token').notEmpty().withMessage('Token requerido'),
+    body('newPassword')
+      .isLength({ min: 6 })
+      .withMessage('La contraseña debe tener al menos 6 caracteres'),
+  ],
+  resetPassword
+);
+
+/**
+ * @route   GET /api/auth/verify-reset-token/:token
+ * @desc    Verifica si un token de reseteo es válido
+ * @access  Public
+ */
+router.get('/verify-reset-token/:token', verifyResetToken);
 
 export default router;
