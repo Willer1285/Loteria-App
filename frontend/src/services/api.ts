@@ -106,24 +106,52 @@ export const paymentAPI = {
 
 // Ranking API
 export const rankingAPI = {
-  getTopBuyers: (limit?: number) =>
-    api.get('/rankings/top-buyers', { params: { limit } }),
+  getTopBuyers: (params?: any) =>
+    api.get('/rankings/top-buyers', { params }),
 
-  getTopWinners: (limit?: number) =>
-    api.get('/rankings/top-winners', { params: { limit } }),
+  getTopWinners: (params?: any) =>
+    api.get('/rankings/top-winners', { params }),
 
-  getTopSpenders: (limit?: number) =>
-    api.get('/rankings/top-spenders', { params: { limit } }),
+  getTopSpenders: (params?: any) =>
+    api.get('/rankings/top-spenders', { params }),
 
   getStats: () => api.get('/rankings/stats'),
+
+  getByLottery: (lotteryId: string) =>
+    api.get(`/rankings/lottery/${lotteryId}`),
+
+  getMonthly: (year: number, month: number) =>
+    api.get('/rankings/monthly', { params: { year, month } }),
+
+  getYearly: (year: number) =>
+    api.get('/rankings/yearly', { params: { year } }),
 };
 
 // User API
 export const userAPI = {
   getAll: (params?: any) => api.get('/users', { params }),
+  getBanned: (params?: any) => api.get('/users/banned/list', { params }),
   getById: (id: string) => api.get(`/users/${id}`),
+  create: (data: any) => api.post('/users', data),
   update: (id: string, data: any) => api.put(`/users/${id}`, data),
+  delete: (id: string) => api.delete(`/users/${id}`),
+  ban: (id: string, reason: string) => api.post(`/users/${id}/ban`, { reason }),
+  unban: (id: string) => api.post(`/users/${id}/unban`),
   deactivate: (id: string) => api.post(`/users/${id}/deactivate`),
   activate: (id: string) => api.post(`/users/${id}/activate`),
   getStats: (id: string) => api.get(`/users/${id}/stats`),
+  updateAvatar: (id: string, avatar: string) => api.put(`/users/${id}/avatar`, { avatar }),
+};
+
+// Settings API
+export const settingsAPI = {
+  get: () => api.get('/settings'),
+  update: (data: any) => api.put('/settings', data),
+  updateLogo: (data: { logo?: string; logoCollapsed?: string }) =>
+    api.put('/settings/logo', data),
+  addPaymentMethod: (data: any) => api.post('/settings/payment-methods', data),
+  updatePaymentMethod: (index: number, data: any) =>
+    api.put(`/settings/payment-methods/${index}`, data),
+  deletePaymentMethod: (index: number) =>
+    api.delete(`/settings/payment-methods/${index}`),
 };

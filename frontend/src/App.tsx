@@ -7,13 +7,20 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import Users from './pages/admin/Users';
+import AdminLotteries from './pages/admin/Lotteries';
+import Settings from './pages/admin/Settings';
 import Lotteries from './pages/Lotteries';
 import PublicLotteries from './pages/PublicLotteries';
+import LotteryDetail from './pages/LotteryDetail';
 import MyTickets from './pages/MyTickets';
 import VerifyTicket from './pages/VerifyTicket';
 import Rankings from './pages/Rankings';
 import Payments from './pages/Payments';
 import Profile from './pages/Profile';
+import Results from './pages/Results';
+import PublicRankings from './pages/PublicRankings';
+import HowToPlay from './pages/HowToPlay';
 
 const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) => {
   const { user, loading } = useAuth();
@@ -30,7 +37,8 @@ const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNo
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && user.role !== 'admin') {
+  // adminOnly means admin or gerente
+  if (adminOnly && user.role !== 'admin' && user.role !== 'gerente') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -49,6 +57,10 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/results" element={<Results />} />
+          <Route path="/public-rankings" element={<PublicRankings />} />
+          <Route path="/how-to-play" element={<HowToPlay />} />
+          <Route path="/lottery/:id" element={<LotteryDetail />} />
 
           {/* Private Routes */}
           <Route
@@ -65,6 +77,33 @@ function App() {
             element={
               <PrivateRoute adminOnly>
                 <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <PrivateRoute adminOnly>
+                <Users />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/lotteries"
+            element={
+              <PrivateRoute adminOnly>
+                <AdminLotteries />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/settings"
+            element={
+              <PrivateRoute adminOnly>
+                <Settings />
               </PrivateRoute>
             }
           />

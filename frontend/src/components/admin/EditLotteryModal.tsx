@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { lotteryAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 
-interface CreateLotteryModalProps {
+interface EditLotteryModalProps {
+  lottery: any;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSuccess }) => {
+const EditLotteryModal: React.FC<EditLotteryModalProps> = ({ lottery, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     controlNumber: '',
@@ -23,6 +24,27 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
     numbersCount: '6',
   });
 
+  useEffect(() => {
+    if (lottery) {
+      // Format the draw date for datetime-local input
+      const drawDate = new Date(lottery.drawDate);
+      const formattedDate = drawDate.toISOString().slice(0, 16);
+
+      setFormData({
+        controlNumber: lottery.controlNumber || '',
+        name: lottery.name || '',
+        description: lottery.description || '',
+        image: lottery.image || '',
+        ticketPrice: lottery.ticketPrice?.toString() || '',
+        drawDate: formattedDate || '',
+        maxTickets: lottery.maxTickets?.toString() || '',
+        numbersMin: lottery.numbersRange?.min?.toString() || '1',
+        numbersMax: lottery.numbersRange?.max?.toString() || '50',
+        numbersCount: lottery.numbersRange?.count?.toString() || '6',
+      });
+    }
+  }, [lottery]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
@@ -35,7 +57,7 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
     setLoading(true);
 
     try {
-      await lotteryAPI.create({
+      await lotteryAPI.update(lottery._id, {
         controlNumber: formData.controlNumber,
         name: formData.name,
         description: formData.description,
@@ -48,17 +70,12 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
           max: parseInt(formData.numbersMax),
           count: parseInt(formData.numbersCount),
         },
-        prizePercentages: [
-          { position: 1, percentage: 50 },
-          { position: 2, percentage: 30 },
-          { position: 3, percentage: 20 },
-        ],
       });
 
-      toast.success('Sorteo creado exitosamente');
+      toast.success('Sorteo actualizado exitosamente');
       onSuccess();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Error al crear sorteo');
+      toast.error(error.response?.data?.error || 'Error al actualizar sorteo');
     } finally {
       setLoading(false);
     }
@@ -68,7 +85,7 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Crear Nuevo Sorteo</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Editar Sorteo</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -237,6 +254,12 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
             </div>
           </div>
 
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Nota:</strong> Solo puedes editar sorteos activos que no tengan boletos vendidos.
+            </p>
+          </div>
+
           <div className="flex space-x-3 pt-4">
             <button
               type="button"
@@ -251,7 +274,7 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
               className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50"
               disabled={loading}
             >
-              {loading ? 'Creando...' : 'Crear Sorteo'}
+              {loading ? 'Actualizando...' : 'Actualizar Sorteo'}
             </button>
           </div>
         </form>
@@ -260,4 +283,4 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
   );
 };
 
-export default CreateLotteryModal;
+export default EditLotteryModal;
