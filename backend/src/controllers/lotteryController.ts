@@ -102,9 +102,13 @@ export const createLottery = async (
       message: 'Lotería creada exitosamente',
       lottery,
     });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al crear lotería' });
+  } catch (error: any) {
+    console.error('Error al crear lotería:', error);
+    res.status(500).json({
+      error: 'Error al crear lotería',
+      details: error.message,
+      validationErrors: error.errors
+    });
   }
 };
 
@@ -137,8 +141,12 @@ export const getAllLotteries = async (
         pages: Math.ceil(total / Number(limit)),
       },
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener loterías' });
+  } catch (error: any) {
+    console.error('Error al obtener loterías:', error);
+    res.status(500).json({
+      error: 'Error al obtener loterías',
+      details: error.message
+    });
   }
 };
 

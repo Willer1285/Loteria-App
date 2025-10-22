@@ -54,8 +54,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
       token,
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar usuario' });
+  } catch (error: any) {
+    console.error('Error al registrar usuario:', error);
+    res.status(500).json({
+      error: 'Error al registrar usuario',
+      details: error.message,
+      validationErrors: error.errors
+    });
   }
 };
 
@@ -112,8 +117,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       },
       token,
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+  } catch (error: any) {
+    console.error('Error al iniciar sesión:', error);
+    res.status(500).json({
+      error: 'Error al iniciar sesión',
+      details: error.message
+    });
   }
 };
 
