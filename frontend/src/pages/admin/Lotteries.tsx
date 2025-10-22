@@ -21,6 +21,13 @@ const Lotteries = () => {
 
   useEffect(() => {
     loadLotteries();
+
+    // Auto-actualizar cada 60 segundos (optimizado)
+    const interval = setInterval(() => {
+      loadLotteries();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -224,7 +231,7 @@ const Lotteries = () => {
                   <div className="mt-4">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-primary-600 h-2 rounded-full transition-all"
+                        className="bg-primary-600 h-2 rounded-full transition-all progress-bar-animated"
                         style={{
                           width: `${lottery.maxTickets > 0 ? ((lottery.soldTickets || 0) / lottery.maxTickets) * 100 : 0}%`,
                         }}

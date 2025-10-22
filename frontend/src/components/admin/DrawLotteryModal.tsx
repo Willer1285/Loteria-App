@@ -12,35 +12,27 @@ interface DrawLotteryModalProps {
 const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [selectionMode, setSelectionMode] = useState<'random' | 'manual'>('random');
-  const [manualNumbers, setManualNumbers] = useState<string>('');
+  const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
+
+  const toggleNumber = (num: number) => {
+    if (selectedNumbers.includes(num)) {
+      setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+    } else {
+      const maxNumbers = lottery.prizes?.length || 1;
+      if (selectedNumbers.length < maxNumbers) {
+        setSelectedNumbers([...selectedNumbers, num].sort((a, b) => a - b));
+      } else {
+        toast.error(`Solo puedes seleccionar ${maxNumbers} números (1 por cada premio)`);
+      }
+    }
+  };
 
   const handleDraw = async () => {
     if (selectionMode === 'manual') {
-      // Validar números manuales
-      const numbers = manualNumbers.split(',').map(n => n.trim());
+      const requiredNumbers = lottery.prizes?.length || 1;
 
-      if (numbers.length === 0) {
-        toast.error('Debes ingresar al menos un número ganador');
-        return;
-      }
-
-      // Validar que todos sean números válidos
-      const validNumbers = numbers.every(n => !isNaN(Number(n)));
-      if (!validNumbers) {
-        toast.error('Todos los valores deben ser números válidos');
-        return;
-      }
-
-      // Validar que estén dentro del rango
-      const min = lottery.numbersRange?.min || 0;
-      const max = lottery.numbersRange?.max || lottery.maxTickets - 1;
-      const inRange = numbers.every(n => {
-        const num = Number(n);
-        return num >= min && num <= max;
-      });
-
-      if (!inRange) {
-        toast.error(`Los números deben estar entre ${min} y ${max}`);
+      if (selectedNumbers.length !== requiredNumbers) {
+        toast.error(`Debes seleccionar exactamente ${requiredNumbers} números (1 por cada premio)`);
         return;
       }
     }
@@ -57,7 +49,7 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
       };
 
       if (selectionMode === 'manual') {
-        payload.manualWinningNumbers = manualNumbers.split(',').map(n => Number(n.trim()));
+        payload.manualWinningNumbers = selectedNumbers;
       }
 
       await lotteryAPI.draw(lottery._id, payload);
@@ -126,25 +118,72 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
             </div>
           </div>
 
-          {/* Manual Number Input */}
+          {/* Manual Number Selection Board */}
           {selectionMode === 'manual' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Números Ganadores (separados por comas)
+                Selecciona los Números Ganadores
               </label>
-              <input
-                type="text"
-                value={manualNumbers}
-                onChange={(e) => setManualNumbers(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder="Ej: 1234, 5678, 9012"
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Rango válido: {lottery.numbersRange?.min || 0} - {lottery.numbersRange?.max || lottery.maxTickets - 1}
+              <p className="text-xs text-gray-600 mb-3">
+                Selecciona {lottery.prizes?.length || 0} números del tablero (1 por cada premio)
               </p>
-              <p className="text-xs font-semibold text-primary-700 mt-1">
-                Se necesitan {lottery.prizes?.length || 0} números (1 por cada premio)
-              </p>
+
+              {/* Number Grid */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-3 max-h-64 overflow-y-auto">
+                <div className="grid grid-cols-8 md:grid-cols-10 gap-2">
+                  {Array.from(
+                    {
+                      length: (lottery.numbersRange?.max || lottery.maxTickets - 1) -
+                              (lottery.numbersRange?.min || 0) + 1
+                    },
+                    (_, i) => i + (lottery.numbersRange?.min || 0)
+                  ).map((num) => {
+                    const padding = (lottery.numbersRange?.max || lottery.maxTickets - 1).toString().length;
+                    const ticketNumber = num.toString().padStart(padding, '0');
+                    const isSelected = selectedNumbers.includes(num);
+
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => toggleNumber(num)}
+                        className={`px-2 py-2 rounded-lg font-mono font-bold text-sm transition-all ${
+                          isSelected
+                            ? 'bg-green-600 text-white shadow-lg scale-105'
+                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                        }`}
+                      >
+                        {ticketNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Selected Numbers Display */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs font-semibold text-blue-900 mb-2">
+                  Números Seleccionados ({selectedNumbers.length}/{lottery.prizes?.length || 0}):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedNumbers.length > 0 ? (
+                    selectedNumbers.map((num, idx) => {
+                      const padding = (lottery.numbersRange?.max || lottery.maxTickets - 1).toString().length;
+                      const prizeName = lottery.prizes?.[idx]?.name || `Premio ${idx + 1}`;
+                      return (
+                        <div key={num} className="flex flex-col items-center">
+                          <span className="px-3 py-1 bg-green-600 text-white rounded-full font-bold font-mono text-sm">
+                            {num.toString().padStart(padding, '0')}
+                          </span>
+                          <span className="text-xs text-gray-600 mt-1">{prizeName}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-gray-500 text-sm">Ninguno seleccionado</span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -159,8 +198,8 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
                 </>
               ) : (
                 <>
-                  Ingresa {lottery.prizes?.length || 0} números ganadores separados por comas
-                  (1 por cada premio). El primer número será para el {lottery.prizes?.[0]?.name || '1er Premio'},
+                  Selecciona {lottery.prizes?.length || 0} números del tablero
+                  (1 por cada premio). El primer número seleccionado será para el {lottery.prizes?.[0]?.name || '1er Premio'},
                   el segundo para el {lottery.prizes?.[1]?.name || '2do Premio'}, etc.
                 </>
               )}
@@ -191,7 +230,7 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
             <button
               onClick={handleDraw}
               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
-              disabled={loading}
+              disabled={loading || (selectionMode === 'manual' && selectedNumbers.length !== (lottery.prizes?.length || 0))}
             >
               {loading ? 'Procesando...' : 'Realizar Sorteo'}
             </button>

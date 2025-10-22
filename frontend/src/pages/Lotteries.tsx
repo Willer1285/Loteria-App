@@ -17,6 +17,13 @@ const Lotteries = () => {
 
   useEffect(() => {
     loadLotteries();
+
+    // Auto-actualizar cada 60 segundos (optimizado)
+    const interval = setInterval(() => {
+      loadLotteries();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadLotteries = async () => {

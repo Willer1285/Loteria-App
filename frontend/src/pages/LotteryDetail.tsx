@@ -90,8 +90,18 @@ const LotteryDetail = () => {
     }
   }, [id]);
 
-  // NO establecer modo de selección por defecto
-  // El usuario debe elegir manualmente
+  // Establecer modo de selección según configuración del sorteo
+  useEffect(() => {
+    if (lottery) {
+      // Si solo hay un modo disponible, establecerlo automáticamente
+      if (lottery.selectionType === 'manual') {
+        setManualSelection(true);
+      } else if (lottery.selectionType === 'random') {
+        setManualSelection(false);
+      }
+      // Si es 'both', el usuario debe elegir (mantiene null)
+    }
+  }, [lottery]);
 
   const loadLottery = async () => {
     try {
@@ -299,7 +309,7 @@ const LotteryDetail = () => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
-                  className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all"
+                  className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all progress-bar-animated"
                   style={{
                     width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
                   }}

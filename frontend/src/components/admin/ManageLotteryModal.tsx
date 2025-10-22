@@ -229,7 +229,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                 </div>
                 <div className="w-full bg-white rounded-full h-3">
                   <div
-                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all"
+                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all progress-bar-animated"
                     style={{
                       width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
                     }}

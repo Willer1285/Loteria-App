@@ -14,3 +14,18 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Animación de barra de progreso para dar sensación de actividad */
+@keyframes progressPulse {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.progress-bar-animated {
+  background-size: 200% 100%;
+  animation: progressPulse 3s ease-in-out infinite;
+}
