@@ -72,7 +72,7 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Realizar Sorteo</h2>
           <button
@@ -142,6 +142,9 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
               <p className="text-xs text-gray-500 mt-2">
                 Rango válido: {lottery.numbersRange?.min || 0} - {lottery.numbersRange?.max || lottery.maxTickets - 1}
               </p>
+              <p className="text-xs font-semibold text-primary-700 mt-1">
+                Se necesitan {lottery.prizes?.length || 0} números (1 por cada premio)
+              </p>
             </div>
           )}
 
@@ -150,13 +153,15 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
             <p className="text-sm text-blue-800">
               {selectionMode === 'random' ? (
                 <>
-                  Los números ganadores serán seleccionados aleatoriamente del rango de boletos vendidos.
-                  Se seleccionará un ganador por cada premio configurado.
+                  Se seleccionarán {lottery.prizes?.length || 0} números ganadores aleatoriamente
+                  (1 por cada premio). El primer número corresponderá al {lottery.prizes?.[0]?.name || '1er Premio'},
+                  el segundo al {lottery.prizes?.[1]?.name || '2do Premio'}, y así sucesivamente.
                 </>
               ) : (
                 <>
-                  Ingresa los números ganadores manualmente. Asegúrate de que los números sean válidos
-                  y correspondan a boletos vendidos. Se asignará un premio a cada número en el orden ingresado.
+                  Ingresa {lottery.prizes?.length || 0} números ganadores separados por comas
+                  (1 por cada premio). El primer número será para el {lottery.prizes?.[0]?.name || '1er Premio'},
+                  el segundo para el {lottery.prizes?.[1]?.name || '2do Premio'}, etc.
                 </>
               )}
             </p>

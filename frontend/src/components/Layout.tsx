@@ -26,23 +26,36 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const navItems = [
+  // Opciones base para todos los usuarios
+  const baseNavItems = [
     { path: '/dashboard', label: 'Inicio', icon: Home },
+    { path: '/profile', label: 'Perfil', icon: User },
+  ];
+
+  // Opciones solo para jugadores
+  const playerNavItems = [
     { path: '/lotteries', label: 'Sorteos', icon: Ticket },
     { path: '/my-tickets', label: 'Mis Boletos', icon: ShoppingBag },
     { path: '/verify-ticket', label: 'Verificar', icon: CheckCircle },
     { path: '/payments', label: 'Pagos', icon: DollarSign },
     { path: '/rankings', label: 'Rankings', icon: Trophy },
-    { path: '/profile', label: 'Perfil', icon: User },
   ];
 
-  if (user?.role === 'admin') {
-    navItems.unshift({
-      path: '/admin',
-      label: 'Admin',
-      icon: Shield,
-    });
-  }
+  // Construir menú según rol
+  const navItems = user?.role === 'admin' || user?.role === 'gerente'
+    ? [
+        {
+          path: '/admin',
+          label: 'Administración',
+          icon: Shield,
+        },
+        ...baseNavItems,
+      ]
+    : [
+        ...baseNavItems.slice(0, 1), // Inicio
+        ...playerNavItems,
+        ...baseNavItems.slice(1), // Perfil
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50">

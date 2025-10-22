@@ -13,21 +13,30 @@ const Dashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const isPlayer = user?.role === 'jugador';
+
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
-      const [lotteriesRes, ticketsRes, statsRes] = await Promise.all([
-        lotteryAPI.getAll({ status: 'active', limit: 5 }),
-        ticketAPI.getUserTickets({ limit: 5 }),
-        rankingAPI.getStats(),
-      ]);
+      // Para jugadores, cargar sus datos
+      if (isPlayer) {
+        const [lotteriesRes, ticketsRes, statsRes] = await Promise.all([
+          lotteryAPI.getAll({ status: 'active', limit: 5 }),
+          ticketAPI.getUserTickets({ limit: 5 }),
+          rankingAPI.getStats(),
+        ]);
 
-      setLotteries(lotteriesRes.data.lotteries);
-      setMyTickets(ticketsRes.data.tickets);
-      setStats(statsRes.data.stats);
+        setLotteries(lotteriesRes.data.lotteries);
+        setMyTickets(ticketsRes.data.tickets);
+        setStats(statsRes.data.stats);
+      } else {
+        // Para admin/gerente, solo cargar sorteos activos
+        const lotteriesRes = await lotteryAPI.getAll({ status: 'active', limit: 5 });
+        setLotteries(lotteriesRes.data.lotteries);
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -53,12 +62,13 @@ const Dashboard = () => {
             Bienvenido, {user?.firstName}
           </h1>
           <p className="text-gray-600 mt-1">
-            Aquí está un resumen de tu actividad
+            {isPlayer ? 'Aquí está un resumen de tu actividad' : 'Panel de administración'}
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Stats Cards - Solo para jugadores */}
+        {isPlayer && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -110,7 +120,8 @@ const Dashboard = () => {
               <TrendingUp className="text-green-600" size={32} />
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Active Lotteries */}
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -162,8 +173,9 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* My Recent Tickets */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        {/* My Recent Tickets - Solo para jugadores */}
+        {isPlayer && (
+          <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Mis Boletos Recientes
           </h2>
@@ -199,7 +211,8 @@ const Dashboard = () => {
               No has comprado boletos aún
             </p>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

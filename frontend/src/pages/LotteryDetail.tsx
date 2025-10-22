@@ -80,24 +80,18 @@ const LotteryDetail = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
-  const [manualSelection, setManualSelection] = useState(false);
+  const [manualSelection, setManualSelection] = useState<boolean | null>(null); // null = no ha elegido aún
 
   useEffect(() => {
+    // Scroll al inicio de la página al cargar
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     if (id) {
       loadLottery();
     }
   }, [id]);
 
-  useEffect(() => {
-    if (lottery) {
-      // Set default selection mode based on lottery configuration
-      if (lottery.selectionType === 'manual') {
-        setManualSelection(true);
-      } else if (lottery.selectionType === 'random') {
-        setManualSelection(false);
-      }
-    }
-  }, [lottery]);
+  // NO establecer modo de selección por defecto
+  // El usuario debe elegir manualmente
 
   const loadLottery = async () => {
     try {
@@ -111,10 +105,11 @@ const LotteryDetail = () => {
     }
   };
 
-  const generateRandomNumbers = () => {
-    if (!lottery) return;
+  // Helper function to generate random numbers
+  const generateRandomNumbersArray = (count: number): number[] => {
+    if (!lottery) return [];
 
-    const { min, max, count } = lottery.numbersRange;
+    const { min, max } = lottery.numbersRange;
     const numbers: number[] = [];
 
     while (numbers.length < count) {
@@ -124,7 +119,13 @@ const LotteryDetail = () => {
       }
     }
 
-    setSelectedNumbers(numbers.sort((a, b) => a - b));
+    return numbers.sort((a, b) => a - b);
+  };
+
+  const generateRandomNumbers = () => {
+    if (!lottery) return;
+    const { count } = lottery.numbersRange;
+    setSelectedNumbers(generateRandomNumbersArray(count));
   };
 
   const toggleNumber = (num: number) => {
@@ -153,7 +154,17 @@ const LotteryDetail = () => {
     const maxAllowed = getMaxAllowedQuantity();
     const actualQty = Math.min(qty, maxAllowed);
     setQuantity(actualQty);
+
+    // Generar números aleatorios para mostrar
+    setSelectedNumbers(generateRandomNumbersArray(actualQty));
   };
+
+  // Actualizar números aleatorios cuando cambia quantity en modo aleatorio
+  useEffect(() => {
+    if (manualSelection === false && lottery) {
+      setSelectedNumbers(generateRandomNumbersArray(quantity));
+    }
+  }, [quantity, manualSelection]);
 
   const getMaxAllowedQuantity = () => {
     const remainingTickets = lottery.maxTickets - lottery.soldTickets;
@@ -454,7 +465,7 @@ const LotteryDetail = () => {
             )}
 
             {/* Info Banner */}
-            {showRandomSelection && !manualSelection && (
+            {showRandomSelection && manualSelection === false && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <div className="flex items-start space-x-3">
                   <Info className="text-blue-600 flex-shrink-0" size={20} />
@@ -467,25 +478,16 @@ const LotteryDetail = () => {
             )}
 
             {/* Manual Number Selection */}
-            {showManualSelection && manualSelection && (
+            {showManualSelection && manualSelection === true && (
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-gray-700 font-medium">
-                      Selecciona tus números ({lottery.numbersRange.min} - {lottery.numbersRange.max})
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Máximo: {getMaxAllowedQuantity() * lottery.numbersRange.count} números
-                      ({getMaxAllowedQuantity()} boletos)
-                    </p>
-                  </div>
-                  <button
-                    onClick={generateRandomNumbers}
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors"
-                  >
-                    <Shuffle size={18} />
-                    <span>Aleatorio</span>
-                  </button>
+                <div className="mb-4">
+                  <p className="text-gray-700 font-medium">
+                    Selecciona tus números ({lottery.numbersRange.min} - {lottery.numbersRange.max})
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Máximo: {getMaxAllowedQuantity() * lottery.numbersRange.count} números
+                    ({getMaxAllowedQuantity()} boletos)
+                  </p>
                 </div>
 
                 {/* Ticket Number Grid */}
@@ -543,7 +545,7 @@ const LotteryDetail = () => {
             )}
 
             {/* Quantity Selection with Quick Buttons */}
-            {!manualSelection && (
+            {manualSelection === false && (
               <div className="mb-6">
                 {/* Quick Select Buttons */}
                 {lottery.randomButtons && lottery.randomButtons.length > 0 && (
@@ -604,6 +606,30 @@ const LotteryDetail = () => {
               </div>
             )}
 
+            {/* Selected Numbers Display for Random Mode */}
+            {manualSelection === false && selectedNumbers.length > 0 && (
+              <div className="mb-6">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-2 font-semibold">
+                    Números Seleccionados al Azar ({selectedNumbers.length} boleto{selectedNumbers.length > 1 ? 's' : ''}):
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedNumbers.map((num, idx) => {
+                      const padding = lottery.numbersRange.max.toString().length;
+                      return (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
+                        >
+                          {num.toString().padStart(padding, '0')}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Total and Purchase */}
             <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-6">
@@ -617,8 +643,8 @@ const LotteryDetail = () => {
                 onClick={handlePurchase}
                 disabled={
                   purchasing ||
-                  (manualSelection &&
-                    selectedNumbers.length !== lottery.numbersRange.count)
+                  manualSelection === null || // No ha elegido modo de selección
+                  (manualSelection === true && selectedNumbers.length === 0) // Modo manual sin números
                 }
                 className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl font-bold text-lg hover:from-primary-700 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >

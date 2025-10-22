@@ -246,7 +246,7 @@ const Lotteries = () => {
                     <span>Ver</span>
                   </button>
 
-                  {lottery.status !== 'completed' && (
+                  {lottery.status !== 'completed' && lottery.status !== 'pending_draw' && (
                     <button
                       onClick={() => setSelectedLotteryForEdit(lottery)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
@@ -256,7 +256,7 @@ const Lotteries = () => {
                     </button>
                   )}
 
-                  {(lottery.soldTickets || 0) === 0 && lottery.status !== 'completed' && (
+                  {(lottery.soldTickets || 0) === 0 && lottery.status !== 'completed' && lottery.status !== 'pending_draw' && (
                     <button
                       onClick={() => handleDeleteLottery(lottery._id, lottery.soldTickets || 0)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"

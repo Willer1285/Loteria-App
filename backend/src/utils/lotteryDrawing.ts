@@ -19,13 +19,17 @@ export const performDraw = async (lotteryId: string, manualWinningNumbers?: numb
     throw new Error('La lotería no está disponible para sorteo');
   }
 
+  // Determinar cuántos números ganadores necesitamos: 1 por cada premio
+  const numberOfWinners = lottery.prizes.length;
+
   // Usar números manuales si se proporcionan, de lo contrario generar aleatoriamente
+  // Generar tantos números como premios haya
   const winningNumbers = manualWinningNumbers && manualWinningNumbers.length > 0
     ? manualWinningNumbers
     : generateRandomNumbers(
         lottery.numbersRange.min,
         lottery.numbersRange.max,
-        lottery.numbersRange.count
+        numberOfWinners // 1 número por cada premio
       );
 
   lottery.winningNumbers = winningNumbers;
@@ -35,61 +39,55 @@ export const performDraw = async (lotteryId: string, manualWinningNumbers?: numb
   // Obtener todos los boletos de esta lotería
   const tickets = await Ticket.find({ lotteryId: lottery._id, status: 'active' });
 
-  // Calcular coincidencias para cada boleto
-  const ticketsWithMatches = tickets.map(ticket => ({
-    ticket,
-    matches: countMatchingNumbers(ticket.numbers, winningNumbers),
-  }));
-
-  // Ordenar por cantidad de coincidencias (de mayor a menor)
-  ticketsWithMatches.sort((a, b) => b.matches - a.matches);
-
   const winners: ILottery['winners'] = [];
 
-  // Asignar premios según la distribución
-  for (const prizeConfig of lottery.prizeDistribution) {
-    const winningTicket = ticketsWithMatches.find(
-      t => t.matches >= lottery.numbersRange.count - (prizeConfig.position - 1) &&
-      !winners.some(w => String(w.ticketId) === String(t.ticket._id))
+  // Asignar cada número ganador a su premio correspondiente
+  // Cada boleto tiene UN solo número, así que buscamos coincidencia exacta
+  for (let i = 0; i < lottery.prizes.length; i++) {
+    const prize = lottery.prizes[i];
+    const winningNumber = winningNumbers[i];
+
+    // Buscar boleto con el número ganador exacto
+    const winningTicket = tickets.find(
+      ticket => ticket.numbers[0] === winningNumber &&
+      !winners.some(w => String(w.ticketId) === String(ticket._id))
     );
 
     if (winningTicket) {
-      const prize = prizeConfig.amount;
-
       winners.push({
-        userId: winningTicket.ticket.userId,
-        ticketId: winningTicket.ticket._id as any,
-        prize,
-        position: prizeConfig.position,
+        userId: winningTicket.userId,
+        ticketId: winningTicket._id as any,
+        prize: prize.amount,
+        position: prize.position,
       });
 
       // Actualizar el boleto
-      winningTicket.ticket.status = 'won';
-      winningTicket.ticket.matchedNumbers = winningTicket.matches;
-      winningTicket.ticket.prize = prize;
-      await winningTicket.ticket.save();
+      winningTicket.status = 'won';
+      winningTicket.matchedNumbers = 1; // Coincidencia exacta
+      winningTicket.prize = prize.amount;
+      await winningTicket.save();
 
       // Actualizar el balance del usuario
       await User.findByIdAndUpdate(
-        winningTicket.ticket.userId,
+        winningTicket.userId,
         {
           $inc: {
-            balance: prize,
-            totalWon: prize
+            balance: prize.amount,
+            totalWon: prize.amount
           }
         }
       );
 
       // Crear registro de pago
       await Payment.create({
-        userId: winningTicket.ticket.userId,
-        amount: prize,
+        userId: winningTicket.userId,
+        amount: prize.amount,
         type: 'prize_payout',
         status: 'completed',
         method: 'wallet',
-        ticketId: winningTicket.ticket._id,
+        ticketId: winningTicket._id,
         lotteryId: lottery._id,
-        description: `Premio por lotería ${lottery.name} - Posición ${prizeConfig.position}`,
+        description: `Premio por lotería ${lottery.name} - Posición ${prize.position}`,
         processedAt: new Date(),
       });
     }
@@ -101,9 +99,8 @@ export const performDraw = async (lotteryId: string, manualWinningNumbers?: numb
   );
 
   for (const ticket of losingTickets) {
-    const matches = countMatchingNumbers(ticket.numbers, winningNumbers);
     ticket.status = 'lost';
-    ticket.matchedNumbers = matches;
+    ticket.matchedNumbers = 0;
     await ticket.save();
   }
 
