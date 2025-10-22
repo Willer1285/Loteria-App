@@ -170,8 +170,10 @@ const PublicLotteries = () => {
           {lotteries.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {lotteries.map((lottery) => {
-                const remainingTickets = lottery.maxTickets - lottery.soldTickets;
-                const soldPercentage = (lottery.soldTickets / lottery.maxTickets) * 100;
+                const remainingTickets = (lottery.maxTickets || 0) - (lottery.soldTickets || 0);
+                const soldPercentage = (lottery.maxTickets || 0) > 0
+                  ? ((lottery.soldTickets || 0) / (lottery.maxTickets || 0)) * 100
+                  : 0;
 
                 return (
                   <div
@@ -196,7 +198,7 @@ const PublicLotteries = () => {
                           <div className="flex items-center space-x-2 text-white">
                             <Trophy size={20} />
                             <span className="font-bold text-lg">
-                              ${lottery.totalPrize.toLocaleString()}
+                              ${(lottery.totalPrize || 0).toLocaleString()}
                             </span>
                           </div>
                         </div>
@@ -213,7 +215,7 @@ const PublicLotteries = () => {
                           <div className="flex items-center space-x-2 text-white">
                             <Trophy size={20} />
                             <span className="font-bold text-lg">
-                              ${lottery.totalPrize.toLocaleString()}
+                              ${(lottery.totalPrize || 0).toLocaleString()}
                             </span>
                           </div>
                         </div>

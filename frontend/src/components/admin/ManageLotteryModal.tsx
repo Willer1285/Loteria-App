@@ -275,7 +275,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                   <div className="flex items-center space-x-2">
                     <DollarSign size={16} className="text-green-600 flex-shrink-0" />
                     <p className="font-semibold text-green-600 text-base break-words">
-                      ${lottery.ticketPrice.toLocaleString()}
+                      ${(lottery.ticketPrice || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -285,7 +285,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                   <div className="flex items-center space-x-2">
                     <Ticket size={16} className="text-gray-400 flex-shrink-0" />
                     <p className="font-semibold text-gray-900 break-words">
-                      {lottery.maxTickets.toLocaleString()}
+                      {(lottery.maxTickets || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -356,7 +356,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                         <span className="font-semibold text-gray-900">{prize.name}</span>
                       </div>
                       <span className="font-bold text-green-600 text-lg">
-                        ${prize.amount.toLocaleString()}
+                        ${(prize.amount || 0).toLocaleString()}
                       </span>
                     </div>
                   ))}
@@ -364,7 +364,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
                   <span className="font-semibold text-gray-900">Total en Premios</span>
                   <span className="font-bold text-green-600 text-xl">
-                    ${lottery.totalPrize.toLocaleString()}
+                    ${(lottery.totalPrize || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -414,7 +414,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-green-600 text-xl">
-                              ${winner.prize.toLocaleString()}
+                              ${(winner.prize || 0).toLocaleString()}
                             </p>
                           </div>
                         </div>

@@ -277,7 +277,7 @@ const LotteryDetail = () => {
               <p className="text-sm text-gray-600">Premio Total</p>
             </div>
             <p className="text-3xl font-bold text-green-600">
-              ${lottery.totalPrize.toLocaleString()}
+              ${(lottery.totalPrize || 0).toLocaleString()}
             </p>
           </div>
 
@@ -356,7 +356,7 @@ const LotteryDetail = () => {
                     {prize.name}
                   </p>
                   <p className="text-3xl font-bold text-green-600">
-                    ${prize.amount.toLocaleString()}
+                    ${(prize.amount || 0).toLocaleString()}
                   </p>
                 </div>
               ))}

@@ -204,16 +204,16 @@ const Lotteries = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <p className="text-xs text-gray-500">Precio</p>
-                      <p className="font-semibold text-gray-900">${lottery.ticketPrice}</p>
+                      <p className="font-semibold text-gray-900">${lottery.ticketPrice || 0}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Premio Total</p>
-                      <p className="font-semibold text-green-600">${lottery.totalPrize.toLocaleString()}</p>
+                      <p className="font-semibold text-green-600">${(lottery.totalPrize || 0).toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Boletos</p>
                       <p className="font-semibold text-gray-900">
-                        {lottery.soldTickets}/{lottery.maxTickets}
+                        {lottery.soldTickets || 0}/{lottery.maxTickets || 0}
                       </p>
                     </div>
                     <div>
@@ -230,12 +230,12 @@ const Lotteries = () => {
                       <div
                         className="bg-primary-600 h-2 rounded-full transition-all"
                         style={{
-                          width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
+                          width: `${lottery.maxTickets > 0 ? ((lottery.soldTickets || 0) / lottery.maxTickets) * 100 : 0}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
-                      {((lottery.soldTickets / lottery.maxTickets) * 100).toFixed(1)}% vendido
+                      {lottery.maxTickets > 0 ? (((lottery.soldTickets || 0) / lottery.maxTickets) * 100).toFixed(1) : 0}% vendido
                     </p>
                   </div>
                 </div>
@@ -260,9 +260,9 @@ const Lotteries = () => {
                     </button>
                   )}
 
-                  {lottery.soldTickets === 0 && lottery.status !== 'completed' && (
+                  {(lottery.soldTickets || 0) === 0 && lottery.status !== 'completed' && (
                     <button
-                      onClick={() => handleDeleteLottery(lottery._id, lottery.soldTickets)}
+                      onClick={() => handleDeleteLottery(lottery._id, lottery.soldTickets || 0)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                     >
                       <Trash2 size={16} />
