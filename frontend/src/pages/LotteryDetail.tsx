@@ -430,7 +430,8 @@ const LotteryDetail = () => {
                     },
                     (_, i) => i + lottery.numbersRange.min
                   ).map((num) => {
-                    const padding = Math.max(4, lottery.numbersRange.max.toString().length);
+                    // Calculate padding based on max number (e.g., 999 = 3 digits, 9999 = 4 digits)
+                    const padding = lottery.numbersRange.max.toString().length;
                     const ticketNumber = num.toString().padStart(padding, '0');
                     return (
                       <button
@@ -455,14 +456,17 @@ const LotteryDetail = () => {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {selectedNumbers.length > 0 ? (
-                      selectedNumbers.map((num) => (
-                        <span
-                          key={num}
-                          className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold"
-                        >
-                          {num.toString().padStart(4, '0')}
-                        </span>
-                      ))
+                      selectedNumbers.map((num) => {
+                        const padding = lottery.numbersRange.max.toString().length;
+                        return (
+                          <span
+                            key={num}
+                            className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
+                          >
+                            {num.toString().padStart(padding, '0')}
+                          </span>
+                        );
+                      })
                     ) : (
                       <span className="text-gray-500">Ninguno</span>
                     )}

@@ -95,7 +95,7 @@ export const createLottery = async (
       randomButtons: randomButtons || [5, 10, 50],
       prizeDistribution,
       createdBy: req.user!._id,
-      status: new Date(drawDate) > new Date() ? 'upcoming' : 'active',
+      status: 'active', // Los sorteos nuevos siempre inician como activos
     });
 
     res.status(201).json({

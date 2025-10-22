@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { lotteryAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Search, Plus, Edit, Eye, Play, XCircle, Filter, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Play, Filter, Trash2 } from 'lucide-react';
 import CreateLotteryModal from '../../components/admin/CreateLotteryModal';
 import EditLotteryModal from '../../components/admin/EditLotteryModal';
 import ManageLotteryModal from '../../components/admin/ManageLotteryModal';
@@ -12,7 +12,7 @@ const Lotteries = () => {
   const [filteredLotteries, setFilteredLotteries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedLotteryForEdit, setSelectedLotteryForEdit] = useState<any>(null);
   const [selectedLotteryForView, setSelectedLotteryForView] = useState<any>(null);
@@ -68,20 +68,6 @@ const Lotteries = () => {
       loadLotteries();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al realizar sorteo');
-    }
-  };
-
-  const handleCancelLottery = async (lotteryId: string) => {
-    if (!confirm('¿Estás seguro de cancelar este sorteo?')) {
-      return;
-    }
-
-    try {
-      await lotteryAPI.cancel(lotteryId);
-      toast.success('Sorteo cancelado exitosamente');
-      loadLotteries();
-    } catch (error) {
-      toast.error('Error al cancelar sorteo');
     }
   };
 
@@ -157,10 +143,9 @@ const Lotteries = () => {
                 onChange={(e) => setStatusFilter(e.target.value as any)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 appearance-none"
               >
-                <option value="all">Todos los estados</option>
+                <option value="all">Todos los sorteos</option>
                 <option value="active">Activos</option>
                 <option value="completed">Completados</option>
-                <option value="cancelled">Cancelados</option>
               </select>
             </div>
           </div>
@@ -286,22 +271,13 @@ const Lotteries = () => {
                   )}
 
                   {lottery.status === 'active' && (
-                    <>
-                      <button
-                        onClick={() => handleDrawLottery(lottery._id)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                      >
-                        <Play size={16} />
-                        <span>Sortear</span>
-                      </button>
-                      <button
-                        onClick={() => handleCancelLottery(lottery._id)}
-                        className="flex items-center space-x-2 px-3 py-2 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                      >
-                        <XCircle size={16} />
-                        <span>Cancelar</span>
-                      </button>
-                    </>
+                    <button
+                      onClick={() => handleDrawLottery(lottery._id)}
+                      className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                    >
+                      <Play size={16} />
+                      <span>Sortear</span>
+                    </button>
                   )}
                 </div>
               </div>

@@ -119,8 +119,8 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
     const min = lottery.numbersRange?.min || 0;
     const max = lottery.numbersRange?.max || totalTickets - 1;
 
-    // Calculate padding for ticket numbers
-    const padding = Math.max(4, max.toString().length);
+    // Calculate padding based on max number (e.g., 999 = 3 digits, 9999 = 4 digits)
+    const padding = max.toString().length;
 
     // Show first 200 tickets to avoid performance issues
     const displayLimit = Math.min(200, totalTickets);
@@ -219,12 +219,12 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
             )}
 
             {/* Quick Stats */}
-            <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Estadísticas</h3>
+            <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl p-4 min-w-0">
+              <h3 className="font-semibold text-gray-900 mb-3 text-sm">Estadísticas</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">Boletos Vendidos</span>
-                  <span className="font-bold text-primary-700">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <span className="text-xs text-gray-700 flex-shrink-0">Vendidos</span>
+                  <span className="font-bold text-primary-700 text-sm truncate">
                     {lottery.soldTickets}/{lottery.maxTickets}
                   </span>
                 </div>
@@ -236,8 +236,8 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                     }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Progreso</span>
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="text-gray-600 flex-shrink-0">Progreso</span>
                   <span className="font-semibold text-primary-700">
                     {((lottery.soldTickets / lottery.maxTickets) * 100).toFixed(1)}%
                   </span>
@@ -255,46 +255,46 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-600">Lotería</label>
-                  <p className="font-semibold text-gray-900">{lottery.lotteryName}</p>
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Lotería</label>
+                  <p className="font-semibold text-gray-900 break-words">{lottery.lotteryName}</p>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-600">Fecha del Sorteo</label>
-                  <div className="flex items-center space-x-2">
-                    <Calendar size={16} className="text-gray-400" />
-                    <p className="font-semibold text-gray-900">
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Fecha del Sorteo</label>
+                  <div className="flex items-start space-x-2">
+                    <Calendar size={16} className="text-gray-400 mt-1 flex-shrink-0" />
+                    <p className="font-semibold text-gray-900 text-sm break-words">
                       {format(new Date(lottery.drawDate), 'PPPp', { locale: es })}
                     </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-600">Precio del Boleto</label>
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Precio del Boleto</label>
                   <div className="flex items-center space-x-2">
-                    <DollarSign size={16} className="text-green-600" />
-                    <p className="font-semibold text-green-600 text-lg">
+                    <DollarSign size={16} className="text-green-600 flex-shrink-0" />
+                    <p className="font-semibold text-green-600 text-base break-words">
                       ${lottery.ticketPrice.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-600">Cantidad de Boletos</label>
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Cantidad de Boletos</label>
                   <div className="flex items-center space-x-2">
-                    <Ticket size={16} className="text-gray-400" />
-                    <p className="font-semibold text-gray-900">
+                    <Ticket size={16} className="text-gray-400 flex-shrink-0" />
+                    <p className="font-semibold text-gray-900 break-words">
                       {lottery.maxTickets.toLocaleString()}
                     </p>
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-600">Máx. por Jugador</label>
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Máx. por Jugador</label>
                   <div className="flex items-center space-x-2">
-                    <Users size={16} className="text-gray-400" />
-                    <p className="font-semibold text-gray-900">
+                    <Users size={16} className="text-gray-400 flex-shrink-0" />
+                    <p className="font-semibold text-gray-900 break-words">
                       {lottery.maxTicketsPerPlayer === 0
                         ? 'Sin límite'
                         : lottery.maxTicketsPerPlayer}
@@ -302,9 +302,9 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm text-gray-600">Tipo de Selección</label>
-                  <p className="font-semibold text-gray-900">
+                <div className="min-w-0">
+                  <label className="text-sm text-gray-600 block">Tipo de Selección</label>
+                  <p className="font-semibold text-gray-900 text-sm break-words">
                     {getSelectionTypeLabel(lottery.selectionType)}
                   </p>
                 </div>
