@@ -7,23 +7,26 @@ import { generateRandomNumbers, countMatchingNumbers } from './ticketGenerator';
 /**
  * Realiza el sorteo de una lotería
  */
-export const performDraw = async (lotteryId: string): Promise<ILottery> => {
+export const performDraw = async (lotteryId: string, manualWinningNumbers?: number[]): Promise<ILottery> => {
   const lottery = await Lottery.findById(lotteryId);
 
   if (!lottery) {
     throw new Error('Lotería no encontrada');
   }
 
-  if (lottery.status !== 'active') {
-    throw new Error('La lotería no está activa para sorteo');
+  // Permitir sortear si está en estado 'active' o 'pending_draw'
+  if (lottery.status !== 'active' && lottery.status !== 'pending_draw') {
+    throw new Error('La lotería no está disponible para sorteo');
   }
 
-  // Generar números ganadores
-  const winningNumbers = generateRandomNumbers(
-    lottery.numbersRange.min,
-    lottery.numbersRange.max,
-    lottery.numbersRange.count
-  );
+  // Usar números manuales si se proporcionan, de lo contrario generar aleatoriamente
+  const winningNumbers = manualWinningNumbers && manualWinningNumbers.length > 0
+    ? manualWinningNumbers
+    : generateRandomNumbers(
+        lottery.numbersRange.min,
+        lottery.numbersRange.max,
+        lottery.numbersRange.count
+      );
 
   lottery.winningNumbers = winningNumbers;
   lottery.status = 'drawing';

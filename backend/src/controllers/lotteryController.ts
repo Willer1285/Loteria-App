@@ -113,6 +113,24 @@ export const createLottery = async (
 };
 
 /**
+ * Actualiza el estado de los sorteos que han llegado a su fecha
+ */
+const updateLotteriesStatus = async (): Promise<void> => {
+  const now = new Date();
+
+  // Cambiar sorteos activos que llegaron a su fecha a "pending_draw"
+  await Lottery.updateMany(
+    {
+      status: 'active',
+      drawDate: { $lte: now }
+    },
+    {
+      $set: { status: 'pending_draw' }
+    }
+  );
+};
+
+/**
  * Obtiene todas las loterías
  */
 export const getAllLotteries = async (
@@ -120,6 +138,9 @@ export const getAllLotteries = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Actualizar estados antes de consultar
+    await updateLotteriesStatus();
+
     const { status, page = 1, limit = 10 } = req.query;
 
     const filter: any = {};
@@ -158,6 +179,9 @@ export const getLotteryById = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Actualizar estados antes de consultar
+    await updateLotteriesStatus();
+
     const { id } = req.params;
 
     const lottery = await Lottery.findById(id)
@@ -219,8 +243,9 @@ export const drawLottery = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
+    const { manualWinningNumbers } = req.body;
 
-    const lottery = await performDraw(id);
+    const lottery = await performDraw(id, manualWinningNumbers);
 
     res.json({
       message: 'Sorteo realizado exitosamente',
