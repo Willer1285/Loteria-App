@@ -75,7 +75,7 @@ export const lotteryAPI = {
   getById: (id: string) => api.get(`/lotteries/${id}`),
   create: (data: any) => api.post('/lotteries', data),
   update: (id: string, data: any) => api.put(`/lotteries/${id}`, data),
-  draw: (id: string) => api.post(`/lotteries/${id}/draw`),
+  draw: (id: string, data?: any) => api.post(`/lotteries/${id}/draw`, data),
   cancel: (id: string) => api.post(`/lotteries/${id}/cancel`),
 };
 
