@@ -9,9 +9,10 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 const createAdminUser = async () => {
   try {
     // Conectar a MongoDB
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/loteria';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/loteria-app';
     await mongoose.connect(mongoUri);
     console.log('✅ Conectado a MongoDB');
+    console.log('📦 Base de datos:', mongoose.connection.db?.databaseName);
 
     // Datos del administrador
     const adminData = {
