@@ -68,6 +68,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
   onClose,
 }) => {
   const [soldTickets, setSoldTickets] = useState<any[]>([]);
+  const [soldNumbers, setSoldNumbers] = useState<Set<number>>(new Set());
   const [loadingTickets, setLoadingTickets] = useState(false);
 
   useEffect(() => {
@@ -78,11 +79,22 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
     setLoadingTickets(true);
     try {
       // Try to get user tickets filtered by lottery
-      const response = await ticketAPI.getUserTickets({ lotteryId: lottery._id });
-      setSoldTickets(response.data.tickets || []);
+      const response = await ticketAPI.getUserTickets({ lotteryId: lottery._id, limit: 100000 });
+      const tickets = response.data.tickets || [];
+      setSoldTickets(tickets);
+
+      // Extraer todos los números vendidos
+      const numbersSet = new Set<number>();
+      tickets.forEach((ticket: any) => {
+        if (ticket.numbers && ticket.numbers.length > 0) {
+          ticket.numbers.forEach((num: number) => numbersSet.add(num));
+        }
+      });
+      setSoldNumbers(numbersSet);
     } catch (error) {
       // If endpoint doesn't support filtering, we'll just show counts
       setSoldTickets([]);
+      setSoldNumbers(new Set());
     } finally {
       setLoadingTickets(false);
     }
@@ -125,7 +137,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
 
     // Mostrar TODOS los números del sorteo
     for (let i = min; i <= max; i++) {
-      const isSold = i < lottery.soldTickets; // Simplified - would need actual ticket data
+      const isSold = soldNumbers.has(i);
       const ticketNumber = i.toString().padStart(padding, '0');
 
       tickets.push(
@@ -148,7 +160,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Tablero de Boletos</h3>
           <span className="text-sm text-gray-600">
-            Mostrando todos los {totalTickets} boletos
+            Vendidos: {soldNumbers.size} de {totalTickets} boletos
           </span>
         </div>
         <div className="grid grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-lg">
@@ -227,7 +239,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                     {lottery.soldTickets}/{lottery.maxTickets}
                   </span>
                 </div>
-                <div className="w-full bg-white rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all progress-bar-animated"
                     style={{

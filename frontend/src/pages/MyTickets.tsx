@@ -31,7 +31,7 @@ const MyTickets = () => {
 
   const loadTickets = async () => {
     try {
-      const response = await ticketAPI.getUserTickets();
+      const response = await ticketAPI.getUserTickets({ limit: 10000 });
       const ticketsData = response.data.tickets;
       setTickets(ticketsData);
 
@@ -39,8 +39,10 @@ const MyTickets = () => {
       const purchasesMap = new Map<string, Purchase>();
 
       ticketsData.forEach((ticket: any) => {
-        // Crear key única para cada compra: lotteryId + purchaseDate (redondeado a minuto)
+        // Crear key única para cada compra: lotteryId + purchaseDate (redondeado a segundo)
         const purchaseDate = new Date(ticket.purchaseDate);
+        // Redondear a segundo (eliminar milisegundos)
+        purchaseDate.setMilliseconds(0);
         const purchaseKey = `${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
 
         if (purchasesMap.has(purchaseKey)) {

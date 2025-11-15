@@ -199,16 +199,17 @@ export const getUserTickets = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, lotteryId, page = 1, limit = 20 } = req.query;
 
     const filter: any = { userId };
     if (status) filter.status = status;
+    if (lotteryId) filter.lotteryId = lotteryId;
 
     const tickets = await Ticket.find(filter)
       .sort({ purchaseDate: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
-      .populate('lotteryId', 'name drawDate status winningNumbers');
+      .populate('lotteryId', 'name drawDate status winningNumbers controlNumber');
 
     const total = await Ticket.countDocuments(filter);
 
