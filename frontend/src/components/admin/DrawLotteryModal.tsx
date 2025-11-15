@@ -20,7 +20,7 @@ const DrawLotteryModal: React.FC<DrawLotteryModalProps> = ({ lottery, onClose, o
     } else {
       const maxNumbers = lottery.prizes?.length || 1;
       if (selectedNumbers.length < maxNumbers) {
-        setSelectedNumbers([...selectedNumbers, num].sort((a, b) => a - b));
+        setSelectedNumbers([...selectedNumbers, num]);
       } else {
         toast.error(`Solo puedes seleccionar ${maxNumbers} números (1 por cada premio)`);
       }

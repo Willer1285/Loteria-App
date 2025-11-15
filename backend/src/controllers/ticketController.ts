@@ -110,6 +110,9 @@ export const purchaseTicket = async (
       }
     }
 
+    // Crear fecha de compra única para todos los boletos de esta transacción
+    const purchaseDate = new Date();
+
     // Crear los boletos
     for (let i = 0; i < quantity; i++) {
       let ticketNumbers: number[];
@@ -137,6 +140,7 @@ export const purchaseTicket = async (
         userId: user._id,
         numbers: ticketNumbers,
         price: lottery.ticketPrice,
+        purchaseDate: purchaseDate,
         verificationCode: generateVerificationCode(),
       });
 

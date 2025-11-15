@@ -231,7 +231,7 @@ const Lotteries = () => {
                   <div className="mt-4">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-primary-600 h-2 rounded-full transition-all progress-bar-animated"
+                        className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all progress-bar-animated"
                         style={{
                           width: `${lottery.maxTickets > 0 ? ((lottery.soldTickets || 0) / lottery.maxTickets) * 100 : 0}%`,
                         }}
