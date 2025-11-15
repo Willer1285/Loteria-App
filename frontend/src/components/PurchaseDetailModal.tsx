@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 interface PurchaseDetailModalProps {
   purchase: {
-    lottery Name: string;
+    lotteryName: string;
     lotteryControlNumber: string;
     ticketPrice: number;
     purchaseDate: Date;
