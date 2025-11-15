@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ticketAPI, lotteryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, CheckCircle, XCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, X } from 'lucide-react';
 
 const VerifyTicket = () => {
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [lotteryStatus, setLotteryStatus] = useState<'active' | 'completed'>('active');
   const [lotteries, setLotteries] = useState<any[]>([]);
-  const [selectedLottery, setSelectedLottery] = useState('');
+  const [selectedLottery, setSelectedLottery] = useState<any>(null);
   const [ticketNumber, setTicketNumber] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadLotteriesByStatus();
@@ -22,20 +23,16 @@ const VerifyTicket = () => {
       const allLotteries = response.data.lotteries || [];
       const now = new Date();
 
-      // Filtrar sorteos por estado
       const filtered = allLotteries.filter((lottery: any) => {
         const drawDate = new Date(lottery.drawDate);
 
         if (lotteryStatus === 'active') {
-          // Sorteos activos: fecha futura o sin números ganadores
           return drawDate > now || (lottery.status === 'active' && !lottery.winningNumbers);
         } else {
-          // Sorteos completados: fecha pasada y con números ganadores
           return drawDate <= now && lottery.status === 'completed' && lottery.winningNumbers;
         }
       });
 
-      // Ordenar por fecha (más recientes primero para completados, más próximos para activos)
       filtered.sort((a: any, b: any) => {
         const dateA = new Date(a.drawDate);
         const dateB = new Date(b.drawDate);
@@ -45,7 +42,7 @@ const VerifyTicket = () => {
       });
 
       setLotteries(filtered);
-      setSelectedLottery('');
+      setSelectedLottery(null);
       setTicketNumber('');
       setTicket(null);
 
@@ -61,7 +58,7 @@ const VerifyTicket = () => {
     e.preventDefault();
 
     if (!selectedLottery || !ticketNumber) {
-      toast.error('Por favor selecciona un sorteo e ingresa el número de boleto');
+      toast.error('Por favor selecciona un sorteo e ingresa el número de control');
       return;
     }
 
@@ -69,12 +66,13 @@ const VerifyTicket = () => {
 
     try {
       const response = await ticketAPI.verifyByLotteryAndNumber({
-        lotteryId: selectedLottery,
+        lotteryId: selectedLottery._id,
         number: ticketNumber,
       });
       const foundTicket = response.data.ticket;
 
       setTicket(foundTicket);
+      setShowModal(true);
       toast.success('Boleto encontrado y verificado');
     } catch (error: any) {
       toast.error(
@@ -86,6 +84,24 @@ const VerifyTicket = () => {
     }
   };
 
+  const formatControlNumber = (lotteryNumber: string, ticketNumber: string) => {
+    return `TKT-${lotteryNumber}-${ticketNumber}`;
+  };
+
+  const formatTicketNumber = (number: number, maxNumber: number) => {
+    const padding = String(maxNumber).length;
+    return String(number).padStart(padding, '0');
+  };
+
+  const getStatusInSpanish = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'active': 'Activo',
+      'won': 'Ganador',
+      'lost': 'Perdedor',
+    };
+    return statusMap[status] || status;
+  };
+
   return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -94,14 +110,12 @@ const VerifyTicket = () => {
             Verificar Boleto
           </h1>
           <p className="text-gray-600 mt-1">
-            Verifica tu boleto ingresando el número
+            Verifica tu boleto ingresando el número de control
           </p>
         </div>
 
-        {/* Formulario de verificación */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <form onSubmit={handleVerify} className="space-y-4">
-            {/* Estado del sorteo */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estado del Sorteo
@@ -132,16 +146,16 @@ const VerifyTicket = () => {
               </div>
             </div>
 
-            {/* Selección de sorteo */}
             {lotteries.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Selecciona el Sorteo
                 </label>
                 <select
-                  value={selectedLottery}
+                  value={selectedLottery?._id || ''}
                   onChange={(e) => {
-                    setSelectedLottery(e.target.value);
+                    const lottery = lotteries.find(l => l._id === e.target.value);
+                    setSelectedLottery(lottery || null);
                     setTicket(null);
                   }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -156,23 +170,21 @@ const VerifyTicket = () => {
               </div>
             )}
 
-            {/* Número de boleto */}
             {selectedLottery && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Boleto
+                  Número de Control
                 </label>
                 <input
                   type="text"
                   value={ticketNumber}
                   onChange={(e) => setTicketNumber(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ingresa el número de tu boleto"
+                  placeholder="Ingresa el número de control del boleto"
                 />
               </div>
             )}
 
-            {/* Botón de verificación */}
             {selectedLottery && (
               <button
                 type="submit"
@@ -186,107 +198,116 @@ const VerifyTicket = () => {
           </form>
         </div>
 
-        {ticket && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-center mb-6">
-              {ticket.status === 'won' ? (
-                <CheckCircle className="text-green-500" size={64} />
-              ) : ticket.status === 'lost' ? (
-                <XCircle className="text-red-500" size={64} />
-              ) : (
-                <CheckCircle className="text-blue-500" size={64} />
-              )}
-            </div>
-
-            <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
-              {ticket.status === 'won'
-                ? '¡Boleto Ganador!'
-                : ticket.status === 'lost'
-                ? 'Boleto no ganador'
-                : 'Boleto Válido'}
-            </h2>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Número de Boleto</p>
-                  <p className="font-semibold text-gray-900">
-                    {ticket.ticketNumber}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Estado</p>
-                  <p className="font-semibold text-gray-900 capitalize">
-                    {ticket.status}
-                  </p>
-                </div>
+        {showModal && ticket && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-2xl font-bold text-gray-900">Resultado de Verificación</h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={24} />
+                </button>
               </div>
 
-              <div>
-                <p className="text-sm text-gray-600">Números Seleccionados</p>
-                <p className="font-semibold text-gray-900">
-                  {ticket.numbers.join(', ')}
-                </p>
-              </div>
+              <div className="p-6">
+                <div className="flex items-center justify-center mb-6">
+                  {ticket.status === 'won' ? (
+                    <CheckCircle className="text-green-500" size={64} />
+                  ) : ticket.status === 'lost' ? (
+                    <XCircle className="text-red-500" size={64} />
+                  ) : (
+                    <CheckCircle className="text-blue-500" size={64} />
+                  )}
+                </div>
 
-              {ticket.lotteryId && (
-                <>
-                  <div>
-                    <p className="text-sm text-gray-600">Sorteo</p>
-                    <p className="font-semibold text-gray-900">
-                      {ticket.lotteryId.name}
-                    </p>
+                <h3 className="text-2xl font-bold text-center text-gray-900 mb-6">
+                  {ticket.status === 'won'
+                    ? '¡Boleto Ganador!'
+                    : ticket.status === 'lost'
+                    ? 'Boleto no ganador'
+                    : 'Boleto Válido'}
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Número de Control</p>
+                      <p className="font-semibold text-gray-900">
+                        {formatControlNumber(selectedLottery?.controlNumber || '0', ticket.ticketNumber)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Estado</p>
+                      <p className="font-semibold text-gray-900">
+                        {getStatusInSpanish(ticket.status)}
+                      </p>
+                    </div>
                   </div>
 
-                  {ticket.lotteryId.winningNumbers && (
+                  <div>
+                    <p className="text-sm text-gray-600">Número de Boleto</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {ticket.numbers.map((num: number, index: number) => (
+                        <span
+                          key={index}
+                          className="px-4 py-2 bg-primary-100 text-primary-900 rounded-lg font-semibold text-lg"
+                        >
+                          {formatTicketNumber(num, selectedLottery?.maxNumber || 100)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {ticket.lotteryId && (
                     <div>
-                      <p className="text-sm text-gray-600">
-                        Números Ganadores
-                      </p>
+                      <p className="text-sm text-gray-600">Sorteo</p>
                       <p className="font-semibold text-gray-900">
-                        {ticket.lotteryId.winningNumbers.join(', ')}
+                        {ticket.lotteryId.name}
                       </p>
                     </div>
                   )}
-                </>
-              )}
 
-              {ticket.matchedNumbers !== undefined && (
-                <div>
-                  <p className="text-sm text-gray-600">Números Acertados</p>
-                  <p className="font-semibold text-gray-900">
-                    {ticket.matchedNumbers}
-                  </p>
+                  {ticket.matchedNumbers !== undefined && ticket.matchedNumbers > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600">Números Acertados</p>
+                      <p className="font-semibold text-gray-900">
+                        {ticket.matchedNumbers}
+                      </p>
+                    </div>
+                  )}
+
+                  {ticket.prize && ticket.prize > 0 && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-gray-600">Premio Ganado</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        ${ticket.prize.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+
+                  {ticket.userId && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-gray-600">Propietario</p>
+                      <p className="font-semibold text-gray-900">
+                        {ticket.userId.firstName} {ticket.userId.lastName}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {ticket.userId.email}
+                      </p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {ticket.prize && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-gray-600">Premio Ganado</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ${ticket.prize}
-                  </p>
-                </div>
-              )}
-
-              {ticket.userId && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-gray-600">Propietario</p>
-                  <p className="font-semibold text-gray-900">
-                    {ticket.userId.firstName} {ticket.userId.lastName}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {ticket.userId.email}
-                  </p>
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <p className="text-xs text-gray-500 text-center">
-                  {ticket.isVerified
-                    ? 'Este boleto ha sido verificado'
-                    : 'Verificación realizada'}
-                </p>
+              <div className="flex items-center justify-end p-6 border-t space-x-3">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Cerrar
+                </button>
               </div>
             </div>
           </div>

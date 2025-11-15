@@ -342,7 +342,7 @@ export const verifyTicketByLotteryAndNumber = async (
       .populate('lotteryId');
 
     if (!ticket) {
-      res.status(404).json({ error: 'No se encontró ningún boleto con ese número en este sorteo' });
+      res.status(404).json({ error: 'No se encontró ningún propietario con ese número de boleto en este sorteo' });
       return;
     }
 

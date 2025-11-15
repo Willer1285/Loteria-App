@@ -28,8 +28,8 @@ const Dashboard = () => {
       if (isPlayer) {
         const [lotteriesRes, ticketsRes, paymentsRes, statsRes] = await Promise.all([
           lotteryAPI.getAll({ status: 'active', limit: 5 }),
-          ticketAPI.getUserTickets({ limit: 10 }),
-          paymentAPI.getHistory({ limit: 10 }),
+          ticketAPI.getUserTickets({ limit: 50 }), // Aumentar límite para obtener más tickets
+          paymentAPI.getHistory({ limit: 50 }), // Aumentar límite para obtener más pagos
           rankingAPI.getStats(),
         ]);
 
@@ -40,24 +40,28 @@ const Dashboard = () => {
         const tickets = ticketsRes.data.tickets || [];
         const payments = paymentsRes.data.payments || [];
 
-        console.log('Tickets recibidos:', tickets.length, tickets);
-        console.log('Pagos recibidos:', payments.length, payments);
+        console.log('=== DATOS DEL BACKEND ===');
+        console.log('Total de tickets:', tickets.length);
+        console.log('Total de pagos:', payments.length);
+        console.log('Tickets completos:', tickets);
+        console.log('Pagos completos:', payments);
 
-        // Convertir tickets a actividades (agrupar por compra)
+        // Convertir tickets a actividades (agrupar por compra usando purchaseDate exacto)
         const purchasesMap = new Map<string, any>();
-        tickets.forEach((ticket: any) => {
+        tickets.forEach((ticket: any, index: number) => {
           if (!ticket.lotteryId) {
-            console.warn('Ticket sin lotteryId:', ticket);
+            console.warn(`⚠️ Ticket #${index} sin lotteryId:`, ticket);
             return;
           }
-          const purchaseDate = new Date(ticket.purchaseDate);
-          purchaseDate.setMilliseconds(0);
-          const purchaseKey = `${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
+
+          // Usar purchaseDate sin modificar para agrupar correctamente
+          const purchaseKey = `${ticket.lotteryId._id}_${ticket.purchaseDate}`;
 
           if (purchasesMap.has(purchaseKey)) {
             const purchase = purchasesMap.get(purchaseKey)!;
             purchase.quantity += 1;
             purchase.totalAmount += ticket.price;
+            purchase.tickets.push(ticket);
           } else {
             purchasesMap.set(purchaseKey, {
               type: 'purchase',
@@ -65,11 +69,17 @@ const Dashboard = () => {
               quantity: 1,
               totalAmount: ticket.price,
               createdAt: ticket.purchaseDate,
+              tickets: [ticket],
             });
           }
         });
 
         const purchases = Array.from(purchasesMap.values());
+        console.log('=== COMPRAS AGRUPADAS ===');
+        console.log('Total de compras:', purchases.length);
+        purchases.forEach((p, i) => {
+          console.log(`Compra ${i + 1}: ${p.lotteryName}, ${p.quantity} tickets, $${p.totalAmount}, fecha: ${p.createdAt}`);
+        });
 
         // Convertir pagos a actividades (solo depositos y retiros)
         const paymentsActivities = payments
@@ -81,12 +91,29 @@ const Dashboard = () => {
             createdAt: payment.createdAt,
           }));
 
+        console.log('=== PAGOS FILTRADOS ===');
+        console.log('Depósitos/Retiros:', paymentsActivities.length);
+        paymentsActivities.forEach((p, i) => {
+          console.log(`${i + 1}. ${p.type}: $${p.amount}, estado: ${p.status}, fecha: ${p.createdAt}`);
+        });
+
         // Combinar y ordenar por fecha
         const allActivities = [...purchases, ...paymentsActivities]
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA; // Más recientes primero
+          })
           .slice(0, 10);
 
-        console.log('Actividades procesadas:', allActivities.length, allActivities);
+        console.log('=== ACTIVIDADES FINALES (10 MÁS RECIENTES) ===');
+        allActivities.forEach((act, i) => {
+          if (act.type === 'purchase') {
+            console.log(`${i + 1}. COMPRA: ${act.lotteryName}, ${act.quantity} tickets, $${act.totalAmount}, ${act.createdAt}`);
+          } else {
+            console.log(`${i + 1}. ${act.type.toUpperCase()}: $${act.amount}, ${act.status}, ${act.createdAt}`);
+          }
+        });
 
         setRecentActivities(allActivities);
       } else {
