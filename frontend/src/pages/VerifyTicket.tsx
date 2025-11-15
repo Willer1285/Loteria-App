@@ -68,17 +68,14 @@ const VerifyTicket = () => {
     setLoading(true);
 
     try {
-      const response = await ticketAPI.getByNumber(ticketNumber);
+      const response = await ticketAPI.verifyByLotteryAndNumber({
+        lotteryId: selectedLottery,
+        number: ticketNumber,
+      });
       const foundTicket = response.data.ticket;
 
-      // Verificar que el boleto pertenezca al sorteo seleccionado
-      if (foundTicket.lotteryId._id !== selectedLottery) {
-        toast.error('El boleto no pertenece al sorteo seleccionado');
-        setTicket(null);
-      } else {
-        setTicket(foundTicket);
-        toast.success('Boleto encontrado');
-      }
+      setTicket(foundTicket);
+      toast.success('Boleto encontrado y verificado');
     } catch (error: any) {
       toast.error(
         error.response?.data?.error || 'No se encontró el boleto'

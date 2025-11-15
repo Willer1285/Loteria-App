@@ -91,6 +91,9 @@ export const ticketAPI = {
   verifyByCode: (code: string) => api.get(`/tickets/verify/${code}`),
 
   getByNumber: (number: string) => api.get(`/tickets/number/${number}`),
+
+  verifyByLotteryAndNumber: (params: { lotteryId: string; number: string }) =>
+    api.get('/tickets/verify-by-lottery', { params }),
 };
 
 // Payment API

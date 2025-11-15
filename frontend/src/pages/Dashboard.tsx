@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Ticket, Trophy, DollarSign, TrendingUp, Eye, User as UserIcon, ArrowDownCircle, ArrowUpCircle, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -32,16 +33,23 @@ const Dashboard = () => {
           rankingAPI.getStats(),
         ]);
 
-        setLotteries(lotteriesRes.data.lotteries);
+        setLotteries(lotteriesRes.data.lotteries || []);
         setStats(statsRes.data.stats);
 
         // Combinar compras, depósitos y retiros en actividades recientes
         const tickets = ticketsRes.data.tickets || [];
         const payments = paymentsRes.data.payments || [];
 
+        console.log('Tickets recibidos:', tickets.length, tickets);
+        console.log('Pagos recibidos:', payments.length, payments);
+
         // Convertir tickets a actividades (agrupar por compra)
         const purchasesMap = new Map<string, any>();
         tickets.forEach((ticket: any) => {
+          if (!ticket.lotteryId) {
+            console.warn('Ticket sin lotteryId:', ticket);
+            return;
+          }
           const purchaseDate = new Date(ticket.purchaseDate);
           purchaseDate.setMilliseconds(0);
           const purchaseKey = `${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
@@ -53,7 +61,7 @@ const Dashboard = () => {
           } else {
             purchasesMap.set(purchaseKey, {
               type: 'purchase',
-              lotteryName: ticket.lotteryId.name,
+              lotteryName: ticket.lotteryId.name || 'Sorteo sin nombre',
               quantity: 1,
               totalAmount: ticket.price,
               createdAt: ticket.purchaseDate,
@@ -78,14 +86,17 @@ const Dashboard = () => {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 10);
 
+        console.log('Actividades procesadas:', allActivities.length, allActivities);
+
         setRecentActivities(allActivities);
       } else {
         // Para admin/gerente, solo cargar sorteos activos
         const lotteriesRes = await lotteryAPI.getAll({ status: 'active', limit: 5 });
-        setLotteries(lotteriesRes.data.lotteries);
+        setLotteries(lotteriesRes.data.lotteries || []);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      toast.error('Error al cargar datos del dashboard');
     } finally {
       setLoading(false);
     }

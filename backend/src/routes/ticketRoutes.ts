@@ -6,6 +6,7 @@ import {
   getAllLotteryTickets,
   verifyTicket,
   getTicketByNumber,
+  verifyTicketByLotteryAndNumber,
 } from '../controllers/ticketController';
 import { authenticate, isAdminOrGerente } from '../middlewares/auth';
 
@@ -46,6 +47,13 @@ router.get('/lottery/all', authenticate, isAdminOrGerente, getAllLotteryTickets)
  * @access  Private
  */
 router.get('/verify/:verificationCode', authenticate, verifyTicket);
+
+/**
+ * @route   GET /api/tickets/verify-by-lottery
+ * @desc    Verifica un boleto por número y sorteo
+ * @access  Private
+ */
+router.get('/verify-by-lottery', authenticate, verifyTicketByLotteryAndNumber);
 
 /**
  * @route   GET /api/tickets/number/:ticketNumber

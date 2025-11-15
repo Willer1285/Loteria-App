@@ -311,3 +311,43 @@ export const getTicketByNumber = async (
     res.status(500).json({ error: 'Error al obtener boleto' });
   }
 };
+
+/**
+ * Verifica un boleto por número comprado y sorteo
+ */
+export const verifyTicketByLotteryAndNumber = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { lotteryId, number } = req.query;
+
+    if (!lotteryId || !number) {
+      res.status(400).json({ error: 'Se requiere el ID del sorteo y el número' });
+      return;
+    }
+
+    const ticketNumber = Number(number);
+    if (isNaN(ticketNumber)) {
+      res.status(400).json({ error: 'El número debe ser válido' });
+      return;
+    }
+
+    // Buscar boleto que contenga el número en el sorteo específico
+    const ticket = await Ticket.findOne({
+      lotteryId,
+      numbers: ticketNumber,
+    })
+      .populate('userId', 'firstName lastName email')
+      .populate('lotteryId');
+
+    if (!ticket) {
+      res.status(404).json({ error: 'No se encontró ningún boleto con ese número en este sorteo' });
+      return;
+    }
+
+    res.json({ ticket });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al verificar boleto' });
+  }
+};
