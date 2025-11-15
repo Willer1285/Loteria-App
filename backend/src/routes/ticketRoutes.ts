@@ -7,8 +7,7 @@ import {
   verifyTicket,
   getTicketByNumber,
 } from '../controllers/ticketController';
-import { authenticate } from '../middlewares/auth';
-import { isAdminOrGerente } from '../middlewares/roleCheck';
+import { authenticate, isAdminOrGerente } from '../middlewares/auth';
 
 const router = Router();
 

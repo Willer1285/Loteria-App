@@ -8,8 +8,7 @@ import {
   approvePayment,
   rejectPayment,
 } from '../controllers/paymentController';
-import { authenticate, isAdmin } from '../middlewares/auth';
-import { isAdminOrGerente } from '../middlewares/roleCheck';
+import { authenticate, isAdmin, isAdminOrGerente } from '../middlewares/auth';
 
 const router = Router();
 
