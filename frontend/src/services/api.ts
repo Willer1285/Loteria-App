@@ -147,6 +147,9 @@ export const userAPI = {
   activate: (id: string) => api.post(`/users/${id}/activate`),
   getStats: (id: string) => api.get(`/users/${id}/stats`),
   updateAvatar: (id: string, avatar: string) => api.put(`/users/${id}/avatar`, { avatar }),
+  updateEmail: (id: string, email: string) => api.put(`/users/${id}/email`, { email }),
+  updatePassword: (id: string, currentPassword: string, newPassword: string) =>
+    api.put(`/users/${id}/password`, { currentPassword, newPassword }),
 };
 
 // Settings API

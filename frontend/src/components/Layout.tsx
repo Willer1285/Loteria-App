@@ -29,13 +29,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Opciones base para todos los usuarios
   const baseNavItems = [
-    { path: '/dashboard', label: 'Inicio', icon: Home },
+    { path: '/dashboard', label: 'Dashboard', icon: Home },
     { path: '/profile', label: 'Perfil', icon: User },
   ];
 
   // Opciones solo para jugadores
   const playerNavItems = [
-    { path: '/', label: 'Página Principal', icon: Globe },
     { path: '/lotteries', label: 'Sorteos', icon: Ticket },
     { path: '/my-tickets', label: 'Mis Compras', icon: ShoppingBag },
     { path: '/verify-ticket', label: 'Verificar', icon: CheckCircle },
@@ -76,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
 
-        <nav className="p-4">
+        <nav className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -98,7 +97,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
+          {/* Página Principal link for players only */}
+          {user?.role !== 'admin' && user?.role !== 'gerente' && (
+            <Link
+              to="/"
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg mb-2 transition-colors text-sm ${
+                location.pathname === '/'
+                  ? 'bg-primary-100 text-primary-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Globe size={16} />
+              <span>Página Principal</span>
+            </Link>
+          )}
+
           <button
             onClick={handleLogout}
             className="flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-red-600 hover:bg-red-50 transition-colors"

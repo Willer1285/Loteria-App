@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { lotteryAPI, ticketAPI, rankingAPI } from '../services/api';
+import { lotteryAPI, ticketAPI, rankingAPI, paymentAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { Ticket, Trophy, DollarSign, TrendingUp, Eye } from 'lucide-react';
+import { Ticket, Trophy, DollarSign, TrendingUp, Eye, User as UserIcon, ArrowDownCircle, ArrowUpCircle, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -11,7 +11,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [lotteries, setLotteries] = useState<any[]>([]);
-  const [myTickets, setMyTickets] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,15 +25,60 @@ const Dashboard = () => {
     try {
       // Para jugadores, cargar sus datos
       if (isPlayer) {
-        const [lotteriesRes, ticketsRes, statsRes] = await Promise.all([
+        const [lotteriesRes, ticketsRes, paymentsRes, statsRes] = await Promise.all([
           lotteryAPI.getAll({ status: 'active', limit: 5 }),
-          ticketAPI.getUserTickets({ limit: 5 }),
+          ticketAPI.getUserTickets({ limit: 10 }),
+          paymentAPI.getHistory({ limit: 10 }),
           rankingAPI.getStats(),
         ]);
 
         setLotteries(lotteriesRes.data.lotteries);
-        setMyTickets(ticketsRes.data.tickets);
         setStats(statsRes.data.stats);
+
+        // Combinar compras, depósitos y retiros en actividades recientes
+        const tickets = ticketsRes.data.tickets || [];
+        const payments = paymentsRes.data.payments || [];
+
+        // Convertir tickets a actividades (agrupar por compra)
+        const purchasesMap = new Map<string, any>();
+        tickets.forEach((ticket: any) => {
+          const purchaseDate = new Date(ticket.purchaseDate);
+          purchaseDate.setMilliseconds(0);
+          const purchaseKey = `${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
+
+          if (purchasesMap.has(purchaseKey)) {
+            const purchase = purchasesMap.get(purchaseKey)!;
+            purchase.quantity += 1;
+            purchase.totalAmount += ticket.price;
+          } else {
+            purchasesMap.set(purchaseKey, {
+              type: 'purchase',
+              lotteryName: ticket.lotteryId.name,
+              quantity: 1,
+              totalAmount: ticket.price,
+              createdAt: ticket.purchaseDate,
+            });
+          }
+        });
+
+        const purchases = Array.from(purchasesMap.values());
+
+        // Convertir pagos a actividades (solo depositos y retiros)
+        const paymentsActivities = payments
+          .filter((p: any) => p.type === 'deposit' || p.type === 'withdrawal')
+          .map((payment: any) => ({
+            type: payment.type,
+            amount: payment.amount,
+            status: payment.status,
+            createdAt: payment.createdAt,
+          }));
+
+        // Combinar y ordenar por fecha
+        const allActivities = [...purchases, ...paymentsActivities]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 10);
+
+        setRecentActivities(allActivities);
       } else {
         // Para admin/gerente, solo cargar sorteos activos
         const lotteriesRes = await lotteryAPI.getAll({ status: 'active', limit: 5 });
@@ -59,13 +104,27 @@ const Dashboard = () => {
   return (
     <Layout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Bienvenido, {user?.firstName}
-          </h1>
-          <p className="text-gray-600 mt-1">
-            {isPlayer ? 'Aquí está un resumen de tu actividad' : 'Panel de administración'}
-          </p>
+        <div className="flex items-center space-x-4">
+          {/* Avatar del usuario */}
+          <div className="w-16 h-16 rounded-full flex items-center justify-center overflow-hidden bg-primary-100">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={`${user.firstName} ${user.lastName}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <UserIcon className="text-primary-600" size={32} />
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Bienvenido, {user?.firstName}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {isPlayer ? 'Aquí está un resumen de tu actividad' : 'Panel de administración'}
+            </p>
+          </div>
         </div>
 
         {/* Stats Cards - Solo para jugadores */}
@@ -203,44 +262,98 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* My Recent Tickets - Solo para jugadores */}
+        {/* Recent Activities - Solo para jugadores */}
         {isPlayer && (
           <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Mis Boletos Recientes
-          </h2>
-          {myTickets.length > 0 ? (
-            <div className="space-y-3">
-              {myTickets.map((ticket) => (
-                <div
-                  key={ticket._id}
-                  className="border border-gray-200 rounded-lg p-3 flex justify-between items-center"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {ticket.ticketNumber}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Números: {ticket.numbers.join(', ')}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    ticket.status === 'won'
-                      ? 'bg-green-100 text-green-800'
-                      : ticket.status === 'lost'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {ticket.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              No has comprado boletos aún
-            </p>
-          )}
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              Actividades Recientes
+            </h2>
+            {recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivities.map((activity, index) => {
+                  const Icon = activity.type === 'purchase'
+                    ? ShoppingCart
+                    : activity.type === 'deposit'
+                    ? ArrowDownCircle
+                    : ArrowUpCircle;
+
+                  const iconColor = activity.type === 'purchase'
+                    ? 'text-blue-600'
+                    : activity.type === 'deposit'
+                    ? 'text-green-600'
+                    : 'text-red-600';
+
+                  const bgColor = activity.type === 'purchase'
+                    ? 'bg-blue-50'
+                    : activity.type === 'deposit'
+                    ? 'bg-green-50'
+                    : 'bg-red-50';
+
+                  return (
+                    <div
+                      key={`${activity.type}-${index}`}
+                      className="border border-gray-200 rounded-lg p-3 flex items-center space-x-3"
+                    >
+                      <div className={`p-2 rounded-lg ${bgColor}`}>
+                        <Icon className={iconColor} size={20} />
+                      </div>
+                      <div className="flex-1">
+                        {activity.type === 'purchase' ? (
+                          <>
+                            <p className="font-semibold text-gray-900">
+                              Compra de boletos
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {activity.lotteryName} - {activity.quantity} boleto{activity.quantity > 1 ? 's' : ''}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {format(new Date(activity.createdAt), 'PPp', { locale: es })}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-900">
+                              {activity.type === 'deposit' ? 'Depósito' : 'Retiro'}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              ${activity.amount.toFixed(2)}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {format(new Date(activity.createdAt), 'PPp', { locale: es })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div>
+                        {activity.type === 'purchase' ? (
+                          <span className="text-sm font-semibold text-gray-900">
+                            ${activity.totalAmount.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            activity.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : activity.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {activity.status === 'completed'
+                              ? 'Completado'
+                              : activity.status === 'pending'
+                              ? 'Pendiente'
+                              : 'Cancelado'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No tienes actividades recientes
+              </p>
+            )}
           </div>
         )}
       </div>

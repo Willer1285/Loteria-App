@@ -12,6 +12,8 @@ import {
   getBannedUsers,
   deleteUser,
   updateAvatar,
+  updateEmail,
+  updatePassword,
 } from '../controllers/userController';
 import { authenticate, isAdmin, isAdminOrGerente } from '../middlewares/auth';
 
@@ -100,5 +102,19 @@ router.delete('/:id', authenticate, isAdmin, deleteUser);
  * @access  Private
  */
 router.put('/:id/avatar', authenticate, updateAvatar);
+
+/**
+ * @route   PUT /api/users/:id/email
+ * @desc    Actualiza el email de un usuario
+ * @access  Private
+ */
+router.put('/:id/email', authenticate, updateEmail);
+
+/**
+ * @route   PUT /api/users/:id/password
+ * @desc    Actualiza la contraseña de un usuario
+ * @access  Private
+ */
+router.put('/:id/password', authenticate, updatePassword);
 
 export default router;

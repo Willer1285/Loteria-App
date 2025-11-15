@@ -2,43 +2,55 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { ticketAPI, lotteryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Search, CheckCircle, XCircle } from 'lucide-react';
 
 const VerifyTicket = () => {
-  const [verificationCode, setVerificationCode] = useState('');
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [verificationMethod, setVerificationMethod] = useState<'code' | 'date'>('code');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [lotteryStatus, setLotteryStatus] = useState<'active' | 'completed'>('active');
   const [lotteries, setLotteries] = useState<any[]>([]);
   const [selectedLottery, setSelectedLottery] = useState('');
   const [ticketNumber, setTicketNumber] = useState('');
 
   useEffect(() => {
-    if (selectedDate) {
-      loadLotteriesByDate();
-    }
-  }, [selectedDate]);
+    loadLotteriesByStatus();
+  }, [lotteryStatus]);
 
-  const loadLotteriesByDate = async () => {
+  const loadLotteriesByStatus = async () => {
     try {
       const response = await lotteryAPI.getAll();
       const allLotteries = response.data.lotteries || [];
+      const now = new Date();
 
-      // Filtrar sorteos por fecha de sorteo
-      const date = new Date(selectedDate);
+      // Filtrar sorteos por estado
       const filtered = allLotteries.filter((lottery: any) => {
         const drawDate = new Date(lottery.drawDate);
-        return (
-          drawDate.getFullYear() === date.getFullYear() &&
-          drawDate.getMonth() === date.getMonth() &&
-          drawDate.getDate() === date.getDate()
-        );
+
+        if (lotteryStatus === 'active') {
+          // Sorteos activos: fecha futura o sin números ganadores
+          return drawDate > now || (lottery.status === 'active' && !lottery.winningNumbers);
+        } else {
+          // Sorteos completados: fecha pasada y con números ganadores
+          return drawDate <= now && lottery.status === 'completed' && lottery.winningNumbers;
+        }
+      });
+
+      // Ordenar por fecha (más recientes primero para completados, más próximos para activos)
+      filtered.sort((a: any, b: any) => {
+        const dateA = new Date(a.drawDate);
+        const dateB = new Date(b.drawDate);
+        return lotteryStatus === 'active'
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
       });
 
       setLotteries(filtered);
+      setSelectedLottery('');
+      setTicketNumber('');
+      setTicket(null);
+
       if (filtered.length === 0) {
-        toast.error('No hay sorteos en esta fecha');
+        toast.error(`No hay sorteos ${lotteryStatus === 'active' ? 'activos' : 'realizados'}`);
       }
     } catch (error) {
       toast.error('Error al cargar sorteos');
@@ -48,55 +60,32 @@ const VerifyTicket = () => {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (verificationMethod === 'code') {
-      if (!verificationCode) {
-        toast.error('Por favor ingresa un código de verificación');
-        return;
-      }
+    if (!selectedLottery || !ticketNumber) {
+      toast.error('Por favor selecciona un sorteo e ingresa el número de boleto');
+      return;
+    }
 
-      setLoading(true);
+    setLoading(true);
 
-      try {
-        const response = await ticketAPI.verifyByCode(verificationCode);
-        setTicket(response.data.ticket);
-        toast.success('Boleto verificado exitosamente');
-      } catch (error: any) {
-        toast.error(
-          error.response?.data?.error || 'No se encontró el boleto'
-        );
+    try {
+      const response = await ticketAPI.getByNumber(ticketNumber);
+      const foundTicket = response.data.ticket;
+
+      // Verificar que el boleto pertenezca al sorteo seleccionado
+      if (foundTicket.lotteryId._id !== selectedLottery) {
+        toast.error('El boleto no pertenece al sorteo seleccionado');
         setTicket(null);
-      } finally {
-        setLoading(false);
+      } else {
+        setTicket(foundTicket);
+        toast.success('Boleto encontrado');
       }
-    } else {
-      // Verificación por fecha y número
-      if (!selectedLottery || !ticketNumber) {
-        toast.error('Por favor selecciona un sorteo e ingresa el número de boleto');
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        const response = await ticketAPI.getByNumber(ticketNumber);
-        const foundTicket = response.data.ticket;
-
-        // Verificar que el boleto pertenezca al sorteo seleccionado
-        if (foundTicket.lotteryId._id !== selectedLottery) {
-          toast.error('El boleto no pertenece al sorteo seleccionado');
-          setTicket(null);
-        } else {
-          setTicket(foundTicket);
-          toast.success('Boleto encontrado');
-        }
-      } catch (error: any) {
-        toast.error(
-          error.response?.data?.error || 'No se encontró el boleto'
-        );
-        setTicket(null);
-      } finally {
-        setLoading(false);
-      }
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.error || 'No se encontró el boleto'
+      );
+      setTicket(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,124 +97,95 @@ const VerifyTicket = () => {
             Verificar Boleto
           </h1>
           <p className="text-gray-600 mt-1">
-            Verifica tu boleto por código o por fecha y número
+            Verifica tu boleto ingresando el número
           </p>
         </div>
 
-        {/* Método de verificación */}
+        {/* Formulario de verificación */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex space-x-4 mb-6">
-            <button
-              onClick={() => {
-                setVerificationMethod('code');
-                setTicket(null);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
-                verificationMethod === 'code'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Por Código
-            </button>
-            <button
-              onClick={() => {
-                setVerificationMethod('date');
-                setTicket(null);
-              }}
-              className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
-                verificationMethod === 'date'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Por Fecha y Número
-            </button>
-          </div>
-
           <form onSubmit={handleVerify} className="space-y-4">
-            {verificationMethod === 'code' ? (
+            {/* Estado del sorteo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estado del Sorteo
+              </label>
+              <div className="flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setLotteryStatus('active')}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                    lotteryStatus === 'active'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Sorteos Activos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLotteryStatus('completed')}
+                  className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                    lotteryStatus === 'completed'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Sorteos Realizados
+                </button>
+              </div>
+            </div>
+
+            {/* Selección de sorteo */}
+            {lotteries.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Código de Verificación
+                  Selecciona el Sorteo
+                </label>
+                <select
+                  value={selectedLottery}
+                  onChange={(e) => {
+                    setSelectedLottery(e.target.value);
+                    setTicket(null);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Selecciona un sorteo...</option>
+                  {lotteries.map((lottery) => (
+                    <option key={lottery._id} value={lottery._id}>
+                      {lottery.name} - {lottery.controlNumber} ({new Date(lottery.drawDate).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Número de boleto */}
+            {selectedLottery && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Boleto
                 </label>
                 <input
                   type="text"
-                  value={verificationCode}
-                  onChange={(e) =>
-                    setVerificationCode(e.target.value.toUpperCase())
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
-                  placeholder="Ej: A1B2C3D4E5F6G7H8"
-                  maxLength={16}
+                  value={ticketNumber}
+                  onChange={(e) => setTicketNumber(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Ingresa el número de tu boleto"
                 />
               </div>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fecha del Sorteo
-                  </label>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => {
-                      setSelectedDate(e.target.value);
-                      setSelectedLottery('');
-                      setTicket(null);
-                    }}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-
-                {selectedDate && lotteries.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selecciona el Sorteo
-                    </label>
-                    <select
-                      value={selectedLottery}
-                      onChange={(e) => {
-                        setSelectedLottery(e.target.value);
-                        setTicket(null);
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">Selecciona un sorteo...</option>
-                      {lotteries.map((lottery) => (
-                        <option key={lottery._id} value={lottery._id}>
-                          {lottery.name} - {lottery.controlNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {selectedLottery && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Número de Boleto
-                    </label>
-                    <input
-                      type="text"
-                      value={ticketNumber}
-                      onChange={(e) => setTicketNumber(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Ingresa el número de tu boleto"
-                    />
-                  </div>
-                )}
-              </>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-            >
-              <Search size={20} />
-              <span>{loading ? 'Verificando...' : 'Verificar Boleto'}</span>
-            </button>
+            {/* Botón de verificación */}
+            {selectedLottery && (
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                <Search size={20} />
+                <span>{loading ? 'Verificando...' : 'Verificar Boleto'}</span>
+              </button>
+            )}
           </form>
         </div>
 
