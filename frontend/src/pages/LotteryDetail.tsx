@@ -218,8 +218,15 @@ const LotteryDetail = () => {
         purchaseData.numbers = selectedNumbers;
       }
 
-      await ticketAPI.purchase(purchaseData);
-      toast.success('¡Boletos comprados exitosamente!');
+      const response = await ticketAPI.purchase(purchaseData);
+
+      // Verificar si hubo advertencia por números insuficientes
+      if (response.data.warning) {
+        toast.warning(response.data.warning, { duration: 5000 });
+      } else {
+        toast.success('¡Boletos comprados exitosamente!');
+      }
+
       navigate('/my-tickets');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al comprar boletos');

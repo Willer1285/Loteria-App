@@ -4,9 +4,25 @@ import { ticketAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Eye, Calendar, DollarSign, Ticket, Hash, Package } from 'lucide-react';
+import PurchaseDetailModal from '../components/PurchaseDetailModal';
+
+interface Purchase {
+  lotteryId: string;
+  lotteryName: string;
+  lotteryControlNumber: string;
+  ticketPrice: number;
+  purchaseDate: Date;
+  tickets: any[];
+  totalAmount: number;
+  quantity: number;
+  status: string;
+}
 
 const MyTickets = () => {
   const [tickets, setTickets] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,9 +32,42 @@ const MyTickets = () => {
   const loadTickets = async () => {
     try {
       const response = await ticketAPI.getUserTickets();
-      setTickets(response.data.tickets);
+      const ticketsData = response.data.tickets;
+      setTickets(ticketsData);
+
+      // Agrupar boletos por compra
+      const purchasesMap = new Map<string, Purchase>();
+
+      ticketsData.forEach((ticket: any) => {
+        // Crear key única para cada compra: lotteryId + purchaseDate (redondeado a minuto)
+        const purchaseDate = new Date(ticket.purchaseDate);
+        const purchaseKey = `${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
+
+        if (purchasesMap.has(purchaseKey)) {
+          const purchase = purchasesMap.get(purchaseKey)!;
+          purchase.tickets.push(ticket);
+          purchase.quantity += 1;
+          purchase.totalAmount += ticket.price;
+        } else {
+          purchasesMap.set(purchaseKey, {
+            lotteryId: ticket.lotteryId._id,
+            lotteryName: ticket.lotteryId.name,
+            lotteryControlNumber: ticket.lotteryId.controlNumber,
+            ticketPrice: ticket.price,
+            purchaseDate: purchaseDate,
+            tickets: [ticket],
+            totalAmount: ticket.price,
+            quantity: 1,
+            status: ticket.status,
+          });
+        }
+      });
+
+      setPurchases(Array.from(purchasesMap.values()).sort(
+        (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime()
+      ));
     } catch (error) {
-      toast.error('Error al cargar boletos');
+      toast.error('Error al cargar compras');
     } finally {
       setLoading(false);
     }
@@ -61,99 +110,112 @@ const MyTickets = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mis Boletos</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Mis Compras</h1>
           <p className="text-gray-600 mt-1">
-            Historial completo de tus boletos de lotería
+            Historial completo de tus compras de boletos
           </p>
         </div>
 
-        {tickets.length > 0 ? (
+        {purchases.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {tickets.map((ticket) => (
+            {purchases.map((purchase, index) => (
               <div
-                key={ticket._id}
+                key={index}
                 className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Boleto</p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {ticket.ticketNumber}
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Package className="text-primary-600" size={20} />
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {purchase.lotteryName}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Control: {purchase.lotteryControlNumber}
                     </p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                      ticket.status
+                      purchase.status
                     )}`}
                   >
-                    {getStatusText(ticket.status)}
+                    {getStatusText(purchase.status)}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Números</p>
-                    <p className="font-semibold text-gray-900">
-                      {ticket.numbers.join(', ')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Precio</p>
-                    <p className="font-semibold text-gray-900">
-                      ${ticket.price}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Fecha de compra</p>
-                    <p className="font-semibold text-gray-900">
-                      {format(new Date(ticket.purchaseDate), 'PPP', {
-                        locale: es,
-                      })}
-                    </p>
-                  </div>
-                  {ticket.prize && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Ticket className="text-gray-400" size={18} />
                     <div>
-                      <p className="text-sm text-gray-600">Premio</p>
-                      <p className="font-semibold text-green-600">
-                        ${ticket.prize}
+                      <p className="text-xs text-gray-600">Precio Unitario</p>
+                      <p className="font-semibold text-gray-900">
+                        ${purchase.ticketPrice.toFixed(2)}
                       </p>
                     </div>
-                  )}
-                </div>
-
-                {ticket.lotteryId && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-gray-600">Sorteo</p>
-                    <p className="font-semibold text-gray-900">
-                      {ticket.lotteryId.name}
-                    </p>
-                    {ticket.lotteryId.winningNumbers && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Números ganadores:{' '}
-                        <span className="font-semibold">
-                          {ticket.lotteryId.winningNumbers.join(', ')}
-                        </span>
-                      </p>
-                    )}
                   </div>
-                )}
 
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-xs text-gray-500">
-                    Código de verificación: {ticket.verificationCode}
-                  </p>
+                  <div className="flex items-center space-x-2">
+                    <Hash className="text-gray-400" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Cantidad</p>
+                      <p className="font-semibold text-gray-900">
+                        {purchase.quantity} boletos
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <DollarSign className="text-green-600" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Monto Total</p>
+                      <p className="font-semibold text-green-600">
+                        ${purchase.totalAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="text-gray-400" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Fecha</p>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {format(purchase.purchaseDate, 'PP', { locale: es })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => setSelectedPurchase(purchase)}
+                  className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                >
+                  <Eye size={18} />
+                  <span>Ver Detalle de Compra</span>
+                </button>
               </div>
             ))}
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-md p-12 text-center">
-            <p className="text-gray-500 text-lg">
-              No tienes boletos aún. ¡Compra tu primer boleto!
+            <Package className="mx-auto text-gray-400 mb-4" size={64} />
+            <p className="text-gray-500 text-lg mb-2">
+              No tienes compras aún
+            </p>
+            <p className="text-gray-400">
+              ¡Compra tu primer boleto y aparecerá aquí!
             </p>
           </div>
         )}
       </div>
+
+      {/* Modal de Detalle de Compra */}
+      {selectedPurchase && (
+        <PurchaseDetailModal
+          purchase={selectedPurchase}
+          onClose={() => setSelectedPurchase(null)}
+        />
+      )}
     </Layout>
   );
 };

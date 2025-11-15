@@ -47,7 +47,8 @@ export const purchaseTicket = async (
       return;
     }
 
-    const totalCost = lottery.ticketPrice * quantity;
+    let originalQuantity = quantity;
+    let totalCost = lottery.ticketPrice * quantity;
 
     // Verificar que el usuario tiene suficiente balance
     if (user.balance < totalCost) {
@@ -56,6 +57,57 @@ export const purchaseTicket = async (
     }
 
     const tickets = [];
+
+    // Si es compra al azar, primero obtener todos los números ya vendidos
+    let soldNumbers: number[] = [];
+    if (!numbers || numbers.length === 0) {
+      const existingTickets = await Ticket.find({
+        lotteryId: lottery._id
+      }).select('numbers');
+
+      soldNumbers = existingTickets.map(t => t.numbers[0]);
+    }
+
+    // Generar todos los números disponibles
+    let availableNumbers: number[] = [];
+    if (!numbers || numbers.length === 0) {
+      const { min, max } = lottery.numbersRange;
+      for (let num = min; num <= max; num++) {
+        if (!soldNumbers.includes(num)) {
+          availableNumbers.push(num);
+        }
+      }
+
+      // Verificar si hay suficientes números disponibles
+      if (availableNumbers.length < quantity) {
+        // Si no hay suficientes, solo vender los disponibles y notificar
+        const adjustedQuantity = availableNumbers.length;
+        const adjustedCost = lottery.ticketPrice * adjustedQuantity;
+
+        if (adjustedQuantity === 0) {
+          res.status(400).json({
+            error: 'No hay números disponibles para comprar.'
+          });
+          return;
+        }
+
+        // Verificar que el usuario tiene suficiente balance para la cantidad ajustada
+        if (user.balance < adjustedCost) {
+          res.status(400).json({ error: 'Saldo insuficiente' });
+          return;
+        }
+
+        // Actualizar cantidad y costo al número de boletos disponibles
+        quantity = adjustedQuantity;
+        totalCost = adjustedCost;
+      }
+
+      // Mezclar el array aleatoriamente (Fisher-Yates shuffle)
+      for (let i = availableNumbers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
+      }
+    }
 
     // Crear los boletos
     for (let i = 0; i < quantity; i++) {
@@ -74,12 +126,8 @@ export const purchaseTicket = async (
         }
         ticketNumbers = numbers;
       } else {
-        // Generar números aleatorios
-        ticketNumbers = generateRandomNumbers(
-          lottery.numbersRange.min,
-          lottery.numbersRange.max,
-          lottery.numbersRange.count
-        );
+        // Tomar el siguiente número disponible (ya está mezclado aleatoriamente)
+        ticketNumbers = [availableNumbers[i]];
       }
 
       const ticket = await Ticket.create({
@@ -116,11 +164,21 @@ export const purchaseTicket = async (
       processedAt: new Date(),
     });
 
-    res.status(201).json({
+    // Preparar respuesta
+    const response: any = {
       message: 'Boleto(s) comprado(s) exitosamente',
       tickets,
       balance: user.balance,
-    });
+    };
+
+    // Si se compró menos de lo solicitado, agregar información
+    if (quantity < originalQuantity) {
+      response.warning = `Solo había ${quantity} números disponibles. Se compraron ${quantity} boletos de ${originalQuantity} solicitados.`;
+      response.adjustedQuantity = quantity;
+      response.requestedQuantity = originalQuantity;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al comprar boleto' });
