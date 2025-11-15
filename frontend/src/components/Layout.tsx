@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   CheckCircle,
+  Globe,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -34,8 +35,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Opciones solo para jugadores
   const playerNavItems = [
+    { path: '/', label: 'Página Principal', icon: Globe },
     { path: '/lotteries', label: 'Sorteos', icon: Ticket },
-    { path: '/my-tickets', label: 'Mis Boletos', icon: ShoppingBag },
+    { path: '/my-tickets', label: 'Mis Compras', icon: ShoppingBag },
     { path: '/verify-ticket', label: 'Verificar', icon: CheckCircle },
     { path: '/payments', label: 'Pagos', icon: DollarSign },
     { path: '/rankings', label: 'Rankings', icon: Trophy },

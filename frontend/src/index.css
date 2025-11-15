@@ -15,17 +15,27 @@ body {
   box-sizing: border-box;
 }
 
-/* Animación de barra de progreso para dar sensación de actividad */
-@keyframes progressPulse {
-  0%, 100% {
-    background-position: 0% 50%;
+/* Animación de barra de progreso con rayas diagonales animadas */
+@keyframes progressStripes {
+  0% {
+    background-position: 0 0;
   }
-  50% {
-    background-position: 100% 50%;
+  100% {
+    background-position: 40px 0;
   }
 }
 
 .progress-bar-animated {
-  background-size: 200% 100%;
-  animation: progressPulse 3s ease-in-out infinite;
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 40px 40px;
+  animation: progressStripes 1s linear infinite;
 }
