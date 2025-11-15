@@ -26,18 +26,30 @@ body {
 }
 
 .progress-bar-animated {
-  background-color: #0ea5e9 !important; /* primary-500 */
-  background-image: linear-gradient(
+  background: linear-gradient(
+    to right,
+    #0ea5e9,
+    #0284c7
+  );
+  background-size: 100% 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.2) 25%,
-    transparent 25%,
-    transparent 50%,
-    rgba(255, 255, 255, 0.2) 50%,
-    rgba(255, 255, 255, 0.2) 75%,
-    transparent 75%,
-    transparent
-  ),
-  linear-gradient(to right, #0ea5e9, #0284c7) !important; /* primary-500 to primary-600 */
-  background-size: 40px 40px, 100% 100%;
+    transparent,
+    transparent 10px,
+    rgba(255, 255, 255, 0.15) 10px,
+    rgba(255, 255, 255, 0.15) 20px
+  );
+  background-size: 40px 40px;
   animation: progressStripes 1s linear infinite;
 }
