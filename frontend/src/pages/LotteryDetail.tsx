@@ -81,6 +81,7 @@ const LotteryDetail = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [manualSelection, setManualSelection] = useState<boolean | null>(null); // null = no ha elegido aún
+  const [showSelectedNumbers, setShowSelectedNumbers] = useState(false); // Controla visibilidad de números seleccionados
 
   useEffect(() => {
     // Scroll al inicio de la página al cargar
@@ -536,27 +537,39 @@ const LotteryDetail = () => {
                 </div>
 
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-2">
-                    Números seleccionados: {selectedNumbers.length}
-                    {selectedNumbers.length > 0 && ` (${Math.ceil(selectedNumbers.length / lottery.numbersRange.count)} boleto${Math.ceil(selectedNumbers.length / lottery.numbersRange.count) > 1 ? 's' : ''})`}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedNumbers.length > 0 ? (
-                      selectedNumbers.map((num) => {
-                        const padding = lottery.numbersRange.max.toString().length;
-                        return (
-                          <span
-                            key={num}
-                            className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
-                          >
-                            {num.toString().padStart(padding, '0')}
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span className="text-gray-500">Ninguno</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-gray-600">
+                      Números seleccionados: {selectedNumbers.length}
+                      {selectedNumbers.length > 0 && ` (${Math.ceil(selectedNumbers.length / lottery.numbersRange.count)} boleto${Math.ceil(selectedNumbers.length / lottery.numbersRange.count) > 1 ? 's' : ''})`}
+                    </p>
+                    {selectedNumbers.length > 0 && (
+                      <button
+                        onClick={() => setShowSelectedNumbers(!showSelectedNumbers)}
+                        className="px-3 py-1 text-xs bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold"
+                      >
+                        {showSelectedNumbers ? 'Ocultar' : 'Mostrar'}
+                      </button>
                     )}
                   </div>
+                  {showSelectedNumbers && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNumbers.length > 0 ? (
+                        selectedNumbers.map((num) => {
+                          const padding = lottery.numbersRange.max.toString().length;
+                          return (
+                            <span
+                              key={num}
+                              className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
+                            >
+                              {num.toString().padStart(padding, '0')}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-gray-500">Ninguno</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -627,22 +640,32 @@ const LotteryDetail = () => {
             {manualSelection === false && selectedNumbers.length > 0 && (
               <div className="mb-6">
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-2 font-semibold">
-                    Números Seleccionados al Azar ({selectedNumbers.length} boleto{selectedNumbers.length > 1 ? 's' : ''}):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedNumbers.map((num, idx) => {
-                      const padding = lottery.numbersRange.max.toString().length;
-                      return (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
-                        >
-                          {num.toString().padStart(padding, '0')}
-                        </span>
-                      );
-                    })}
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-gray-600 font-semibold">
+                      Números Seleccionados al Azar ({selectedNumbers.length} boleto{selectedNumbers.length > 1 ? 's' : ''}):
+                    </p>
+                    <button
+                      onClick={() => setShowSelectedNumbers(!showSelectedNumbers)}
+                      className="px-3 py-1 text-xs bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-semibold"
+                    >
+                      {showSelectedNumbers ? 'Ocultar' : 'Mostrar'}
+                    </button>
                   </div>
+                  {showSelectedNumbers && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedNumbers.map((num, idx) => {
+                        const padding = lottery.numbersRange.max.toString().length;
+                        return (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-primary-600 text-white rounded-full font-bold font-mono"
+                          >
+                            {num.toString().padStart(padding, '0')}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -1,35 +1,102 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { ticketAPI } from '../services/api';
+import { ticketAPI, lotteryAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Search, CheckCircle, XCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Calendar } from 'lucide-react';
 
 const VerifyTicket = () => {
   const [verificationCode, setVerificationCode] = useState('');
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<'code' | 'date'>('code');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [lotteries, setLotteries] = useState<any[]>([]);
+  const [selectedLottery, setSelectedLottery] = useState('');
+  const [ticketNumber, setTicketNumber] = useState('');
+
+  useEffect(() => {
+    if (selectedDate) {
+      loadLotteriesByDate();
+    }
+  }, [selectedDate]);
+
+  const loadLotteriesByDate = async () => {
+    try {
+      const response = await lotteryAPI.getAll();
+      const allLotteries = response.data.lotteries || [];
+
+      // Filtrar sorteos por fecha de sorteo
+      const date = new Date(selectedDate);
+      const filtered = allLotteries.filter((lottery: any) => {
+        const drawDate = new Date(lottery.drawDate);
+        return (
+          drawDate.getFullYear() === date.getFullYear() &&
+          drawDate.getMonth() === date.getMonth() &&
+          drawDate.getDate() === date.getDate()
+        );
+      });
+
+      setLotteries(filtered);
+      if (filtered.length === 0) {
+        toast.error('No hay sorteos en esta fecha');
+      }
+    } catch (error) {
+      toast.error('Error al cargar sorteos');
+    }
+  };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!verificationCode) {
-      toast.error('Por favor ingresa un código de verificación');
-      return;
-    }
+    if (verificationMethod === 'code') {
+      if (!verificationCode) {
+        toast.error('Por favor ingresa un código de verificación');
+        return;
+      }
 
-    setLoading(true);
+      setLoading(true);
 
-    try {
-      const response = await ticketAPI.verifyByCode(verificationCode);
-      setTicket(response.data.ticket);
-      toast.success('Boleto verificado exitosamente');
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error || 'No se encontró el boleto'
-      );
-      setTicket(null);
-    } finally {
-      setLoading(false);
+      try {
+        const response = await ticketAPI.verifyByCode(verificationCode);
+        setTicket(response.data.ticket);
+        toast.success('Boleto verificado exitosamente');
+      } catch (error: any) {
+        toast.error(
+          error.response?.data?.error || 'No se encontró el boleto'
+        );
+        setTicket(null);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Verificación por fecha y número
+      if (!selectedLottery || !ticketNumber) {
+        toast.error('Por favor selecciona un sorteo e ingresa el número de boleto');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await ticketAPI.getByNumber(ticketNumber);
+        const foundTicket = response.data.ticket;
+
+        // Verificar que el boleto pertenezca al sorteo seleccionado
+        if (foundTicket.lotteryId._id !== selectedLottery) {
+          toast.error('El boleto no pertenece al sorteo seleccionado');
+          setTicket(null);
+        } else {
+          setTicket(foundTicket);
+          toast.success('Boleto encontrado');
+        }
+      } catch (error: any) {
+        toast.error(
+          error.response?.data?.error || 'No se encontró el boleto'
+        );
+        setTicket(null);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -41,27 +108,115 @@ const VerifyTicket = () => {
             Verificar Boleto
           </h1>
           <p className="text-gray-600 mt-1">
-            Ingresa el código de verificación para validar un boleto
+            Verifica tu boleto por código o por fecha y número
           </p>
         </div>
 
+        {/* Método de verificación */}
         <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="flex space-x-4 mb-6">
+            <button
+              onClick={() => {
+                setVerificationMethod('code');
+                setTicket(null);
+              }}
+              className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                verificationMethod === 'code'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Por Código
+            </button>
+            <button
+              onClick={() => {
+                setVerificationMethod('date');
+                setTicket(null);
+              }}
+              className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-colors ${
+                verificationMethod === 'date'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Por Fecha y Número
+            </button>
+          </div>
+
           <form onSubmit={handleVerify} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Código de Verificación
-              </label>
-              <input
-                type="text"
-                value={verificationCode}
-                onChange={(e) =>
-                  setVerificationCode(e.target.value.toUpperCase())
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
-                placeholder="Ej: A1B2C3D4E5F6G7H8"
-                maxLength={16}
-              />
-            </div>
+            {verificationMethod === 'code' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código de Verificación
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) =>
+                    setVerificationCode(e.target.value.toUpperCase())
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent uppercase"
+                  placeholder="Ej: A1B2C3D4E5F6G7H8"
+                  maxLength={16}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha del Sorteo
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setSelectedLottery('');
+                      setTicket(null);
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {selectedDate && lotteries.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Selecciona el Sorteo
+                    </label>
+                    <select
+                      value={selectedLottery}
+                      onChange={(e) => {
+                        setSelectedLottery(e.target.value);
+                        setTicket(null);
+                      }}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                      <option value="">Selecciona un sorteo...</option>
+                      {lotteries.map((lottery) => (
+                        <option key={lottery._id} value={lottery._id}>
+                          {lottery.name} - {lottery.controlNumber}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {selectedLottery && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Número de Boleto
+                    </label>
+                    <input
+                      type="text"
+                      value={ticketNumber}
+                      onChange={(e) => setTicketNumber(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      placeholder="Ingresa el número de tu boleto"
+                    />
+                  </div>
+                )}
+              </>
+            )}
 
             <button
               type="submit"
