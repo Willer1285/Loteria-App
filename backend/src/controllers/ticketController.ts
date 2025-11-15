@@ -19,7 +19,8 @@ export const purchaseTicket = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { lotteryId, numbers, quantity = 1 } = req.body;
+    const { lotteryId, numbers } = req.body;
+    let quantity = req.body.quantity || 1; // Usar let para poder reasignar
     const userId = req.user!._id;
 
     // Verificar que la lotería existe
