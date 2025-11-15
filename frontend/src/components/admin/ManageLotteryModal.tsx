@@ -78,8 +78,8 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
   const loadTickets = async () => {
     setLoadingTickets(true);
     try {
-      // Try to get user tickets filtered by lottery
-      const response = await ticketAPI.getUserTickets({ lotteryId: lottery._id, limit: 100000 });
+      // Get all tickets for this lottery (admin endpoint)
+      const response = await ticketAPI.getAllLotteryTickets({ lotteryId: lottery._id });
       const tickets = response.data.tickets || [];
       setSoldTickets(tickets);
 
@@ -92,6 +92,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
       });
       setSoldNumbers(numbersSet);
     } catch (error) {
+      console.error('Error loading lottery tickets:', error);
       // If endpoint doesn't support filtering, we'll just show counts
       setSoldTickets([]);
       setSoldNumbers(new Set());

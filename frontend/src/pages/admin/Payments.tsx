@@ -40,7 +40,11 @@ const Payments = () => {
   const loadPayments = async () => {
     try {
       const response = await paymentAPI.getAll({ limit: 1000 });
-      setPayments(response.data.payments || []);
+      // Filtrar solo depósitos y retiros, excluir compras de boletos
+      const paymentsData = (response.data.payments || []).filter(
+        (p: any) => p.type === 'deposit' || p.type === 'withdrawal'
+      );
+      setPayments(paymentsData);
     } catch (error) {
       toast.error('Error al cargar pagos');
     } finally {

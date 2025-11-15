@@ -5,8 +5,11 @@ import {
   withdraw,
   getPaymentHistory,
   getAllPayments,
+  approvePayment,
+  rejectPayment,
 } from '../controllers/paymentController';
 import { authenticate, isAdmin } from '../middlewares/auth';
+import { isAdminOrGerente } from '../middlewares/roleCheck';
 
 const router = Router();
 
@@ -53,5 +56,19 @@ router.get('/history', authenticate, getPaymentHistory);
  * @access  Private/Admin
  */
 router.get('/all', authenticate, isAdmin, getAllPayments);
+
+/**
+ * @route   POST /api/payments/:id/approve
+ * @desc    Aprueba un pago pendiente
+ * @access  Private/Admin/Gerente
+ */
+router.post('/:id/approve', authenticate, isAdminOrGerente, approvePayment);
+
+/**
+ * @route   POST /api/payments/:id/reject
+ * @desc    Rechaza un pago pendiente
+ * @access  Private/Admin/Gerente
+ */
+router.post('/:id/reject', authenticate, isAdminOrGerente, rejectPayment);
 
 export default router;

@@ -26,16 +26,18 @@ body {
 }
 
 .progress-bar-animated {
+  background-color: #0ea5e9 !important; /* primary-500 */
   background-image: linear-gradient(
     45deg,
-    rgba(255, 255, 255, 0.15) 25%,
+    rgba(255, 255, 255, 0.2) 25%,
     transparent 25%,
     transparent 50%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.15) 75%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
     transparent 75%,
     transparent
-  );
-  background-size: 40px 40px;
+  ),
+  linear-gradient(to right, #0ea5e9, #0284c7) !important; /* primary-500 to primary-600 */
+  background-size: 40px 40px, 100% 100%;
   animation: progressStripes 1s linear infinite;
 }

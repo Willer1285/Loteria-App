@@ -3,10 +3,12 @@ import { body } from 'express-validator';
 import {
   purchaseTicket,
   getUserTickets,
+  getAllLotteryTickets,
   verifyTicket,
   getTicketByNumber,
 } from '../controllers/ticketController';
 import { authenticate } from '../middlewares/auth';
+import { isAdminOrGerente } from '../middlewares/roleCheck';
 
 const router = Router();
 
@@ -31,6 +33,13 @@ router.post(
  * @access  Private
  */
 router.get('/', authenticate, getUserTickets);
+
+/**
+ * @route   GET /api/tickets/lottery/all
+ * @desc    Obtiene todos los boletos de un sorteo (Admin/Gerente)
+ * @access  Private (Admin/Gerente)
+ */
+router.get('/lottery/all', authenticate, isAdminOrGerente, getAllLotteryTickets);
 
 /**
  * @route   GET /api/tickets/verify/:verificationCode

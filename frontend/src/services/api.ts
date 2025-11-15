@@ -86,6 +86,8 @@ export const ticketAPI = {
 
   getUserTickets: (params?: any) => api.get('/tickets', { params }),
 
+  getAllLotteryTickets: (params?: any) => api.get('/tickets/lottery/all', { params }),
+
   verifyByCode: (code: string) => api.get(`/tickets/verify/${code}`),
 
   getByNumber: (number: string) => api.get(`/tickets/number/${number}`),
@@ -102,6 +104,10 @@ export const paymentAPI = {
   getHistory: (params?: any) => api.get('/payments/history', { params }),
 
   getAll: (params?: any) => api.get('/payments/all', { params }),
+
+  approve: (id: string) => api.post(`/payments/${id}/approve`),
+
+  reject: (id: string, reason?: string) => api.post(`/payments/${id}/reject`, { reason }),
 };
 
 // Ranking API

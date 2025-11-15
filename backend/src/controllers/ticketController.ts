@@ -227,6 +227,36 @@ export const getUserTickets = async (
 };
 
 /**
+ * Obtiene todos los boletos de un sorteo (solo para admin/gerente)
+ */
+export const getAllLotteryTickets = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { lotteryId } = req.query;
+
+    if (!lotteryId) {
+      res.status(400).json({ error: 'Se requiere el ID del sorteo' });
+      return;
+    }
+
+    const filter: any = { lotteryId };
+
+    const tickets = await Ticket.find(filter)
+      .select('numbers status userId')
+      .sort({ purchaseDate: -1 });
+
+    res.json({
+      tickets,
+      total: tickets.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener boletos del sorteo' });
+  }
+};
+
+/**
  * Verifica un boleto por código
  */
 export const verifyTicket = async (
