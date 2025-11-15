@@ -65,6 +65,24 @@ const MyTickets = () => {
         }
       });
 
+      // Actualizar el estado de cada compra basándose en todos sus tickets
+      purchasesMap.forEach((purchase) => {
+        const hasWinner = purchase.tickets.some((t: any) => t.status === 'won');
+        const allLost = purchase.tickets.every((t: any) => t.status === 'lost');
+        const allActive = purchase.tickets.every((t: any) => t.status === 'active');
+
+        if (hasWinner) {
+          purchase.status = 'won';
+        } else if (allLost) {
+          purchase.status = 'lost';
+        } else if (allActive) {
+          purchase.status = 'active';
+        } else {
+          // Estado mixto, priorizar activo
+          purchase.status = 'active';
+        }
+      });
+
       setPurchases(Array.from(purchasesMap.values()).sort(
         (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime()
       ));

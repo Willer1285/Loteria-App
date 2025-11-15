@@ -16,8 +16,11 @@ import {
 const Payments = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<any[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
+  const [completedPayments, setCompletedPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
   const [filters, setFilters] = useState({
     searchTerm: '',
     startDate: '',
@@ -119,6 +122,10 @@ const Payments = () => {
     }
 
     setFilteredPayments(filtered);
+
+    // Separar pendientes y completadas
+    setPendingPayments(filtered.filter(p => p.status === 'pending'));
+    setCompletedPayments(filtered.filter(p => p.status === 'completed' || p.status === 'cancelled'));
   };
 
   const handleFilterChange = (field: string, value: string) => {
@@ -139,6 +146,33 @@ const Payments = () => {
       minAmount: '',
       maxAmount: '',
     });
+  };
+
+  const handleApprovePayment = async (paymentId: string) => {
+    if (!confirm('¿Estás seguro de aprobar esta transacción?')) {
+      return;
+    }
+
+    try {
+      await paymentAPI.approve(paymentId);
+      toast.success('Pago aprobado exitosamente');
+      loadPayments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al aprobar pago');
+    }
+  };
+
+  const handleRejectPayment = async (paymentId: string) => {
+    const reason = prompt('Razón del rechazo (opcional):');
+    if (reason === null) return; // Usuario canceló
+
+    try {
+      await paymentAPI.reject(paymentId, reason || undefined);
+      toast.success('Pago rechazado');
+      loadPayments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al rechazar pago');
+    }
   };
 
   const handleExport = () => {
