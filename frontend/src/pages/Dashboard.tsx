@@ -28,8 +28,8 @@ const Dashboard = () => {
       if (isPlayer) {
         const [lotteriesRes, ticketsRes, paymentsRes, statsRes] = await Promise.all([
           lotteryAPI.getAll({ status: 'active', limit: 5 }),
-          ticketAPI.getUserTickets({ limit: 50 }), // Aumentar límite para obtener más tickets
-          paymentAPI.getHistory({ limit: 50 }), // Aumentar límite para obtener más pagos
+          ticketAPI.getUserTickets({ limit: 10000 }), // Traer TODOS los tickets del usuario
+          paymentAPI.getHistory({ limit: 10000 }), // Traer TODOS los pagos del usuario
           rankingAPI.getStats(),
         ]);
 
@@ -81,14 +81,15 @@ const Dashboard = () => {
           console.log(`Compra ${i + 1}: ${p.lotteryName}, ${p.quantity} tickets, $${p.totalAmount}, fecha: ${p.createdAt}`);
         });
 
-        // Convertir pagos a actividades (solo depositos y retiros)
+        // Convertir pagos a actividades (depositos, retiros y premios en dinero)
         const paymentsActivities = payments
-          .filter((p: any) => p.type === 'deposit' || p.type === 'withdrawal')
+          .filter((p: any) => p.type === 'deposit' || p.type === 'withdrawal' || p.type === 'prize_payout')
           .map((payment: any) => ({
             type: payment.type,
             amount: payment.amount,
             status: payment.status,
             createdAt: payment.createdAt,
+            description: payment.description,
           }));
 
         console.log('=== PAGOS FILTRADOS ===');
@@ -313,18 +314,24 @@ const Dashboard = () => {
                     ? ShoppingCart
                     : activity.type === 'deposit'
                     ? ArrowDownCircle
+                    : activity.type === 'prize_payout'
+                    ? Trophy
                     : ArrowUpCircle;
 
                   const iconColor = activity.type === 'purchase'
                     ? 'text-blue-600'
                     : activity.type === 'deposit'
                     ? 'text-green-600'
+                    : activity.type === 'prize_payout'
+                    ? 'text-yellow-600'
                     : 'text-red-600';
 
                   const bgColor = activity.type === 'purchase'
                     ? 'bg-blue-50'
                     : activity.type === 'deposit'
                     ? 'bg-green-50'
+                    : activity.type === 'prize_payout'
+                    ? 'bg-yellow-50'
                     : 'bg-red-50';
 
                   return (
@@ -351,10 +358,14 @@ const Dashboard = () => {
                         ) : (
                           <>
                             <p className="font-semibold text-gray-900">
-                              {activity.type === 'deposit' ? 'Depósito' : 'Retiro'}
+                              {activity.type === 'deposit'
+                                ? 'Depósito'
+                                : activity.type === 'prize_payout'
+                                ? 'Premio Ganado'
+                                : 'Retiro'}
                             </p>
                             <p className="text-sm text-gray-600">
-                              ${activity.amount.toFixed(2)}
+                              {activity.description || `$${activity.amount.toFixed(2)}`}
                             </p>
                             <p className="text-xs text-gray-500 mt-1">
                               {format(new Date(activity.createdAt), 'PPp', { locale: es })}

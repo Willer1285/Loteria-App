@@ -4,7 +4,7 @@ import { ticketAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Eye, Calendar, DollarSign, Ticket, Hash, Package } from 'lucide-react';
+import { Eye, Calendar, DollarSign, Ticket, Hash, Package, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import PurchaseDetailModal from '../components/PurchaseDetailModal';
 
 interface Purchase {
@@ -22,12 +22,41 @@ interface Purchase {
 const MyTickets = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Estados de paginación y filtros
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadTickets();
   }, []);
+
+  useEffect(() => {
+    filterPurchases();
+  }, [purchases, searchTerm, currentPage, itemsPerPage]);
+
+  const filterPurchases = () => {
+    let filtered = [...purchases];
+
+    // Aplicar búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.lotteryName.toLowerCase().includes(term) ||
+          p.lotteryControlNumber.toLowerCase().includes(term) ||
+          format(p.purchaseDate, 'PP', { locale: es }).toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredPurchases(filtered);
+    // Reset a primera página si cambia la búsqueda
+    if (searchTerm) setCurrentPage(1);
+  };
 
   const loadTickets = async () => {
     try {
@@ -116,6 +145,12 @@ const MyTickets = () => {
     return statusMap[status] || status;
   };
 
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPurchases = filteredPurchases.slice(startIndex, endIndex);
+
   if (loading) {
     return (
       <Layout>
@@ -132,13 +167,59 @@ const MyTickets = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mis Compras</h1>
           <p className="text-gray-600 mt-1">
-            Historial completo de tus compras de boletos
+            Historial completo de tus compras de boletos ({filteredPurchases.length} compra{filteredPurchases.length !== 1 ? 's' : ''})
           </p>
         </div>
 
-        {purchases.length > 0 ? (
+        {/* Filtros y búsqueda */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Búsqueda */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Buscar
+              </label>
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por sorteo, control o fecha..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Items por página */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mostrar por página
+              </label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {currentPurchases.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 gap-4">
-            {purchases.map((purchase, index) => (
+            {currentPurchases.map((purchase, index) => (
               <div
                 key={index}
                 className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
@@ -216,14 +297,69 @@ const MyTickets = () => {
               </div>
             ))}
           </div>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between bg-white rounded-xl shadow-md p-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredPurchases.length)} de {filteredPurchases.length} compras
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <div className="flex space-x-1">
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 7) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 4) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 3) {
+                      pageNum = totalPages - 6 + i;
+                    } else {
+                      pageNum = currentPage - 3 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-4 py-2 rounded-lg font-semibold ${
+                          currentPage === pageNum
+                            ? 'bg-primary-600 text-white'
+                            : 'hover:bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         ) : (
           <div className="bg-white rounded-xl shadow-md p-12 text-center">
             <Package className="mx-auto text-gray-400 mb-4" size={64} />
             <p className="text-gray-500 text-lg mb-2">
-              No tienes compras aún
+              {searchTerm ? 'No se encontraron compras' : 'No tienes compras aún'}
             </p>
             <p className="text-gray-400">
-              ¡Compra tu primer boleto y aparecerá aquí!
+              {searchTerm
+                ? 'Intenta con otros términos de búsqueda'
+                : '¡Compra tu primer boleto y aparecerá aquí!'}
             </p>
           </div>
         )}

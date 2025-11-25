@@ -235,7 +235,7 @@ const VerifyTicket = () => {
                     <div>
                       <p className="text-sm text-gray-600">Número de Control</p>
                       <p className="font-semibold text-gray-900">
-                        {formatControlNumber(selectedLottery?.controlNumber || '0', ticket.ticketNumber)}
+                        {ticket.ticketNumber}
                       </p>
                     </div>
                     <div>
