@@ -237,6 +237,17 @@ const Dashboard = () => {
                     key={lottery._id}
                     className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors"
                   >
+                    {/* Imagen del sorteo */}
+                    {lottery.image && (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        <img
+                          src={lottery.image}
+                          alt={lottery.name}
+                          className="w-full h-48 object-cover"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-900">

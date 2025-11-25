@@ -94,6 +94,17 @@ const Lotteries = () => {
                 key={lottery._id}
                 className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
+                {/* Imagen del sorteo */}
+                {lottery.image && (
+                  <div className="mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={lottery.image}
+                      alt={lottery.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">

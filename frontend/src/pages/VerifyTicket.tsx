@@ -110,7 +110,7 @@ const VerifyTicket = () => {
             Verificar Boleto
           </h1>
           <p className="text-gray-600 mt-1">
-            Verifica tu boleto ingresando el número de control
+            Verifica el estado de tu boleto
           </p>
         </div>
 
@@ -173,14 +173,14 @@ const VerifyTicket = () => {
             {selectedLottery && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Control
+                  Número de Boleto
                 </label>
                 <input
                   type="text"
                   value={ticketNumber}
                   onChange={(e) => setTicketNumber(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Ingresa el número de control del boleto"
+                  placeholder="Ingresa el número del boleto"
                 />
               </div>
             )}
@@ -233,7 +233,7 @@ const VerifyTicket = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Número de Control</p>
+                      <p className="text-sm text-gray-600">Número de Boleto</p>
                       <p className="font-semibold text-gray-900">
                         {ticket.ticketNumber}
                       </p>
