@@ -94,27 +94,35 @@ export const getPaymentHistory = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-    const { type, status, page = 1, limit = 20 } = req.query;
+    const { type, status, page, limit } = req.query;
 
     const filter: any = { userId };
     if (type) filter.type = type;
     if (status) filter.status = status;
 
-    const payments = await Payment.find(filter)
+    let query = Payment.find(filter)
       .sort({ createdAt: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit))
       .populate('ticketId')
       .populate('lotteryId', 'name');
 
+    // Solo aplicar paginación si se especifica limit
+    if (limit) {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit);
+      query = query
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum);
+    }
+
+    const payments = await query;
     const total = await Payment.countDocuments(filter);
 
     res.json({
       payments,
       pagination: {
         total,
-        page: Number(page),
-        pages: Math.ceil(total / Number(limit)),
+        page: limit ? Number(page) || 1 : 1,
+        pages: limit ? Math.ceil(total / Number(limit)) : 1,
       },
     });
   } catch (error) {

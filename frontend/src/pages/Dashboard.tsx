@@ -28,8 +28,8 @@ const Dashboard = () => {
       if (isPlayer) {
         const [lotteriesRes, ticketsRes, paymentsRes, statsRes] = await Promise.all([
           lotteryAPI.getAll({ status: 'active', limit: 5 }),
-          ticketAPI.getUserTickets({ limit: 10000 }), // Traer TODOS los tickets del usuario
-          paymentAPI.getHistory({ limit: 10000 }), // Traer TODOS los pagos del usuario
+          ticketAPI.getUserTickets({}), // Obtener TODOS los tickets del usuario sin límite
+          paymentAPI.getHistory({}), // Obtener TODOS los pagos del usuario sin límite
           rankingAPI.getStats(),
         ]);
 

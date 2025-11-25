@@ -205,26 +205,34 @@ export const getUserTickets = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-    const { status, lotteryId, page = 1, limit = 20 } = req.query;
+    const { status, lotteryId, page, limit } = req.query;
 
     const filter: any = { userId };
     if (status) filter.status = status;
     if (lotteryId) filter.lotteryId = lotteryId;
 
-    const tickets = await Ticket.find(filter)
+    let query = Ticket.find(filter)
       .sort({ purchaseDate: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit))
       .populate('lotteryId', 'name drawDate status winningNumbers controlNumber');
 
+    // Solo aplicar paginación si se especifica limit
+    if (limit) {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit);
+      query = query
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum);
+    }
+
+    const tickets = await query;
     const total = await Ticket.countDocuments(filter);
 
     res.json({
       tickets,
       pagination: {
         total,
-        page: Number(page),
-        pages: Math.ceil(total / Number(limit)),
+        page: limit ? Number(page) || 1 : 1,
+        pages: limit ? Math.ceil(total / Number(limit)) : 1,
       },
     });
   } catch (error) {

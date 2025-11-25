@@ -60,7 +60,7 @@ const MyTickets = () => {
 
   const loadTickets = async () => {
     try {
-      const response = await ticketAPI.getUserTickets({ limit: 10000 });
+      const response = await ticketAPI.getUserTickets({}); // Obtener TODOS los tickets sin límite
       const ticketsData = response.data.tickets;
       setTickets(ticketsData);
 
