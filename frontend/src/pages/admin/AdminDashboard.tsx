@@ -115,7 +115,7 @@ const AdminDashboard = () => {
       const activeUsersThisMonth = recentUsers.length;
 
       const totalRevenue = recentTickets.reduce(
-        (sum: number, t: any) => sum + (t.amount || 0),
+        (sum: number, t: any) => sum + (t.price || 0),
         0
       );
 
@@ -456,7 +456,7 @@ const AdminDashboard = () => {
                           </p>
                         </div>
                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-                          ${ticket.amount?.toFixed(2)}
+                          ${ticket.price?.toFixed(2)}
                         </span>
                       </div>
                     </div>
