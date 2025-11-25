@@ -59,6 +59,9 @@ export const purchaseTicket = async (
 
     const tickets = [];
 
+    // Obtener el número de tickets existentes para este sorteo para generar números secuenciales
+    const existingTicketsCount = await Ticket.countDocuments({ lotteryId: lottery._id });
+
     // Si es compra al azar, primero obtener todos los números ya vendidos
     let soldNumbers: number[] = [];
     if (!numbers || numbers.length === 0) {
@@ -134,8 +137,11 @@ export const purchaseTicket = async (
         ticketNumbers = [availableNumbers[i]];
       }
 
+      // Generar número secuencial: count actual + i + 1
+      const sequentialNumber = existingTicketsCount + i + 1;
+
       const ticket = await Ticket.create({
-        ticketNumber: generateTicketNumber(),
+        ticketNumber: generateTicketNumber(lottery.controlNumber, sequentialNumber),
         lotteryId: lottery._id,
         userId: user._id,
         numbers: ticketNumbers,

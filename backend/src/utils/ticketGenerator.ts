@@ -1,13 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Genera un número único de boleto
+ * Genera un número único de boleto basado en el número de control del sorteo
+ * y un número secuencial
+ * Formato: TKT-{controlNumber}-{sequentialNumber}
+ * Ejemplo: TKT-LOT-2025-003-0020
  */
-export const generateTicketNumber = (): string => {
+export const generateTicketNumber = (controlNumber: string, sequentialNumber: number): string => {
   const prefix = 'TKT';
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `${prefix}-${timestamp}-${random}`;
+  // Formatear el número secuencial con padding de 4 dígitos
+  const paddedNumber = sequentialNumber.toString().padStart(4, '0');
+  return `${prefix}-${controlNumber}-${paddedNumber}`;
 };
 
 /**

@@ -149,7 +149,7 @@ const Tickets = () => {
         ticket.lotteryId?.controlNumber || 'N/A',
         ticket.numbers?.join(', ') || 'N/A',
         new Date(ticket.purchaseDate).toLocaleString(),
-        `$${ticket.amount}`,
+        `$${ticket.price}`,
         ticket.status || 'active',
       ]),
     ]
@@ -172,7 +172,7 @@ const Tickets = () => {
   const calculateStats = () => {
     const totalTickets = filteredTickets.length;
     const totalAmount = filteredTickets.reduce(
-      (sum, ticket) => sum + (ticket.amount || 0),
+      (sum, ticket) => sum + (ticket.price || 0),
       0
     );
     const uniqueUsers = new Set(
@@ -486,7 +486,7 @@ const Tickets = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold text-green-600">
-                        ${ticket.amount?.toFixed(2)}
+                        ${ticket.price?.toFixed(2)}
                       </div>
                     </td>
                   </tr>
