@@ -6,6 +6,7 @@ import { Ticket, Eye, EyeOff, Home } from 'lucide-react';
 const Register = () => {
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     confirmPassword: '',
     firstName: '',
@@ -104,6 +105,26 @@ const Register = () => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nombre de Usuario
+            </label>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              required
+              minLength={3}
+              maxLength={20}
+              placeholder="Usuario público (3-20 caracteres)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Este será tu nombre visible públicamente para proteger tu identidad
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -15,18 +15,26 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { email, password, firstName, lastName, phone, address } = req.body;
+    const { email, username, password, firstName, lastName, phone, address } = req.body;
 
-    // Verificar si el usuario ya existe
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Verificar si el email ya existe
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       res.status(400).json({ error: 'El email ya está registrado' });
+      return;
+    }
+
+    // Verificar si el username ya existe
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      res.status(400).json({ error: 'El nombre de usuario ya está en uso' });
       return;
     }
 
     // Crear nuevo usuario
     const user = await User.create({
       email,
+      username,
       password,
       firstName,
       lastName,
@@ -47,6 +55,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
@@ -110,6 +119,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
@@ -143,6 +153,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
