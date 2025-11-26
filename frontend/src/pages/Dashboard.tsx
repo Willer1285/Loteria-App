@@ -251,33 +251,36 @@ const Dashboard = () => {
 
                       {/* Contenido del sorteo */}
                       <div className="flex-1 min-w-0 flex flex-col">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900">
-                              {lottery.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {lottery.description}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-sm">
-                              <span className="text-gray-600">
-                                Precio: <span className="font-semibold">${lottery.ticketPrice}</span>
-                              </span>
-                              <span className="text-gray-600">
-                                Premio: <span className="font-semibold text-green-600">
-                                  ${lottery.totalPrize}
-                                </span>
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex sm:flex-col items-start gap-2 sm:text-right flex-shrink-0">
-                            <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold whitespace-nowrap">
-                              {lottery.status}
+                        {/* Nombre y Status */}
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="font-semibold text-gray-900">
+                            {lottery.name}
+                          </h3>
+                          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold whitespace-nowrap ml-2">
+                            {lottery.status}
+                          </span>
+                        </div>
+
+                        {/* Fecha */}
+                        <p className="text-sm text-gray-600 mb-2">
+                          Sorteo: {format(new Date(lottery.drawDate), 'PPP', { locale: es })}
+                        </p>
+
+                        {/* Descripción */}
+                        <p className="text-sm text-gray-600 mb-2">
+                          {lottery.description}
+                        </p>
+
+                        {/* Precio y Premio */}
+                        <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-3 text-sm">
+                          <span className="text-gray-600">
+                            Precio: <span className="font-semibold">${lottery.ticketPrice}</span>
+                          </span>
+                          <span className="text-gray-600">
+                            Premio: <span className="font-semibold text-green-600">
+                              ${lottery.totalPrize}
                             </span>
-                            <p className="text-sm text-gray-600">
-                              Sorteo: {format(new Date(lottery.drawDate), 'PPP', { locale: es })}
-                            </p>
-                          </div>
+                          </span>
                         </div>
 
                         {/* Barra de progreso animada */}
