@@ -233,7 +233,7 @@ const VerifyTicket = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-600">Número de Boleto</p>
+                      <p className="text-sm text-gray-600">Número de Control</p>
                       <p className="font-semibold text-gray-900">
                         {ticket.ticketNumber}
                       </p>
@@ -247,7 +247,7 @@ const VerifyTicket = () => {
                   </div>
 
                   <div>
-                    <p className="text-sm text-gray-600">Número de Boleto</p>
+                    <p className="text-sm text-gray-600">Números Seleccionados</p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {ticket.numbers.map((num: number, index: number) => (
                         <span
