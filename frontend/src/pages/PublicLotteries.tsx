@@ -5,6 +5,7 @@ import { lotteryAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Calendar, DollarSign, Ticket as TicketIcon, Trophy, Lock, Clock, ArrowRight } from 'lucide-react';
+import { translateLotteryStatus } from '../utils/translations';
 
 // Countdown Timer Component
 const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {

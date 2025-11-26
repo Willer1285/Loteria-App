@@ -17,6 +17,7 @@ import {
   Zap,
   Edit3,
 } from 'lucide-react';
+import { translateLotteryStatus } from '../utils/translations';
 
 // Countdown Timer Component
 const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {

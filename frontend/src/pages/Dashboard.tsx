@@ -7,6 +7,7 @@ import { Ticket, Trophy, DollarSign, TrendingUp, Eye, User as UserIcon, ArrowDow
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { translateLotteryStatus } from '../utils/translations';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -257,7 +258,7 @@ const Dashboard = () => {
                             {lottery.name}
                           </h3>
                           <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold whitespace-nowrap ml-2">
-                            {lottery.status}
+                            {translateLotteryStatus(lottery.status)}
                           </span>
                         </div>
 

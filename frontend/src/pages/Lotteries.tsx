@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, DollarSign, Ticket as TicketIcon, Trophy } from 'lucide-react';
+import { translateLotteryStatus } from '../utils/translations';
 
 const Lotteries = () => {
   const { user, refreshProfile } = useAuth();
@@ -111,7 +112,7 @@ const Lotteries = () => {
                       {lottery.name}
                     </h2>
                     <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                      {lottery.status}
+                      {translateLotteryStatus(lottery.status)}
                     </span>
                   </div>
                   <Trophy className="text-yellow-500" size={32} />

@@ -7,6 +7,7 @@ import CreateLotteryModal from '../../components/admin/CreateLotteryModal';
 import EditLotteryModal from '../../components/admin/EditLotteryModal';
 import ManageLotteryModal from '../../components/admin/ManageLotteryModal';
 import DrawLotteryModal from '../../components/admin/DrawLotteryModal';
+import { translateLotteryStatus } from '../../utils/translations';
 
 const Lotteries = () => {
   const [lotteries, setLotteries] = useState<any[]>([]);
@@ -189,10 +190,7 @@ const Lotteries = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {lottery.status === 'active' && 'Activo'}
-                      {lottery.status === 'pending_draw' && 'Sin Sortear'}
-                      {lottery.status === 'completed' && 'Completado'}
-                      {lottery.status === 'cancelled' && 'Cancelado'}
+                      {translateLotteryStatus(lottery.status)}
                     </span>
                   </div>
 
