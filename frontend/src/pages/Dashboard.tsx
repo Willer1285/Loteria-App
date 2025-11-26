@@ -237,10 +237,10 @@ const Dashboard = () => {
                     key={lottery._id}
                     className="border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors"
                   >
-                    <div className="flex gap-4">
-                      {/* Imagen del sorteo - cuadrada al lado izquierdo */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                      {/* Imagen del sorteo - cuadrada al lado izquierdo en desktop, arriba en móvil */}
                       {lottery.image && (
-                        <div className="flex-shrink-0 w-32 h-32 rounded-lg overflow-hidden">
+                        <div className="flex-shrink-0 w-full md:w-40 h-40 md:h-auto md:self-stretch rounded-lg overflow-hidden">
                           <img
                             src={lottery.image}
                             alt={lottery.name}
@@ -250,16 +250,16 @@ const Dashboard = () => {
                       )}
 
                       {/* Contenido del sorteo */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2">
+                          <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900">
                               {lottery.name}
                             </h3>
                             <p className="text-sm text-gray-600 mt-1">
                               {lottery.description}
                             </p>
-                            <div className="flex items-center space-x-4 mt-2 text-sm">
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-sm">
                               <span className="text-gray-600">
                                 Precio: <span className="font-semibold">${lottery.ticketPrice}</span>
                               </span>
@@ -270,11 +270,11 @@ const Dashboard = () => {
                               </span>
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                          <div className="flex sm:flex-col items-start gap-2 sm:text-right flex-shrink-0">
+                            <span className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold whitespace-nowrap">
                               {lottery.status}
                             </span>
-                            <p className="text-sm text-gray-600 mt-2">
+                            <p className="text-sm text-gray-600">
                               Sorteo: {format(new Date(lottery.drawDate), 'PPP', { locale: es })}
                             </p>
                           </div>
@@ -298,7 +298,7 @@ const Dashboard = () => {
                         {isPlayer && (
                           <button
                             onClick={() => navigate(`/lottery/${lottery._id}`)}
-                            className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                            className="w-full mt-auto flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
                           >
                             <Eye size={18} />
                             <span>Ver Sorteo</span>
