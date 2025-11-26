@@ -116,9 +116,9 @@ const PublicRankings = () => {
                     {/* User Info */}
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-gray-900">
-                        {player.user.firstName} {player.user.lastName}
+                        {player.user.username}
                       </h3>
-                      <p className="text-sm text-gray-600">{player.user.email}</p>
+                      <p className="text-sm text-gray-600">Jugador</p>
                     </div>
 
                     {/* Stats */}

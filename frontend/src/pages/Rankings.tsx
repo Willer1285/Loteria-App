@@ -139,10 +139,7 @@ const Rankings = () => {
                     <td className="px-6 py-4">
                       <div>
                         <p className="font-semibold text-gray-900">
-                          {item.user.firstName} {item.user.lastName}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {item.user.email}
+                          {item.user.username}
                         </p>
                       </div>
                     </td>
