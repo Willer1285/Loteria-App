@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { auth } from '../middlewares/auth';
+import { authenticate } from '../middlewares/auth';
 import {
   getUserNotifications,
   markAsRead,
@@ -11,7 +11,7 @@ import {
 const router = Router();
 
 // Todas las rutas requieren autenticación
-router.use(auth);
+router.use(authenticate);
 
 // Obtener notificaciones del usuario
 router.get('/', getUserNotifications);
