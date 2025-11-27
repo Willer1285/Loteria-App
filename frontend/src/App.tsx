@@ -104,7 +104,7 @@ function App() {
           />
 
           <Route
-            path="/admin/tickets"
+            path="/admin/ticket-sales"
             element={
               <PrivateRoute adminOnly>
                 <AdminTickets />
