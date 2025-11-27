@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import User from '../models/User';
+import { createNotification } from './notificationController';
 
 /**
  * Obtiene todos los usuarios (solo admin)
@@ -103,6 +104,29 @@ export const updateUser = async (
     if (!user) {
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
+    }
+
+    // Crear notificación de cambios en el perfil (solo si el usuario se actualiza a sí mismo)
+    if (String(req.user?._id) === id && req.user?.role !== 'admin') {
+      // Detectar qué campos fueron actualizados
+      const updatedFields: string[] = [];
+      if (updates.firstName || updates.lastName) updatedFields.push('nombre');
+      if (updates.phone) updatedFields.push('teléfono');
+      if (updates.address) updatedFields.push('dirección');
+      if (updates.email) updatedFields.push('email');
+      if (updates.avatar) updatedFields.push('foto de perfil');
+
+      if (updatedFields.length > 0) {
+        const fieldsText = updatedFields.join(', ');
+        await createNotification(
+          String(user._id),
+          'profile_updated',
+          'Perfil actualizado',
+          `Has actualizado tu ${fieldsText} exitosamente.`,
+          String(user._id),
+          { updatedFields }
+        );
+      }
     }
 
     res.json({
