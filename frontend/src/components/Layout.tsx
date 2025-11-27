@@ -11,7 +11,9 @@ import {
   Shield,
   CheckCircle,
   Globe,
+  Bell,
 } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,6 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { path: '/verify-ticket', label: 'Verificar', icon: CheckCircle },
     { path: '/payments', label: 'Pagos', icon: DollarSign },
     { path: '/rankings', label: 'Rankings', icon: Trophy },
+    { path: '/notifications', label: 'Notificaciones', icon: Bell },
   ];
 
   // Construir menú según rol
@@ -63,7 +66,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-10">
         <div className="p-6 border-b">
-          <h1 className="text-2xl font-bold text-primary-600">Lotería App</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-primary-600">Lotería App</h1>
+            {user?.role === 'jugador' && <NotificationBell />}
+          </div>
           <div className="flex items-center space-x-3 mt-3">
             {/* Avatar del usuario */}
             <div className="w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-primary-100 flex-shrink-0">

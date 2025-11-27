@@ -24,6 +24,7 @@ import Profile from './pages/Profile';
 import Results from './pages/Results';
 import PublicRankings from './pages/PublicRankings';
 import HowToPlay from './pages/HowToPlay';
+import Notifications from './pages/Notifications';
 
 const PrivateRoute = ({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) => {
   const { user, loading } = useAuth();
@@ -188,6 +189,15 @@ function App() {
             element={
               <PrivateRoute>
                 <Profile />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/notifications"
+            element={
+              <PrivateRoute>
+                <Notifications />
               </PrivateRoute>
             }
           />

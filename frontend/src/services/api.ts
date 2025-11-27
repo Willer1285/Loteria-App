@@ -176,3 +176,13 @@ export const emailTemplateAPI = {
   delete: (type: string) => api.delete(`/email-templates/${type}`),
   toggle: (type: string) => api.patch(`/email-templates/${type}/toggle`),
 };
+
+// Notifications API
+export const notificationAPI = {
+  getAll: (params?: { limit?: number; unreadOnly?: boolean }) =>
+    api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/mark-all-read'),
+  delete: (id: string) => api.delete(`/notifications/${id}`),
+};
