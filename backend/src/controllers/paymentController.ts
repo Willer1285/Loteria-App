@@ -3,6 +3,7 @@ import { AuthRequest } from '../middlewares/auth';
 import Payment from '../models/Payment';
 import User from '../models/User';
 import { v4 as uuidv4 } from 'uuid';
+import { createNotification } from './notificationController';
 
 /**
  * Realiza un depósito a la cuenta del usuario
@@ -215,6 +216,18 @@ export const approvePayment = async (
     payment.processedAt = new Date();
     await payment.save();
 
+    // Crear notificación
+    const notifType = payment.type === 'deposit' ? 'deposit_approved' : 'withdrawal_approved';
+    const actionText = payment.type === 'deposit' ? 'depositado' : 'retirado';
+    await createNotification(
+      String(user._id),
+      notifType,
+      `${payment.type === 'deposit' ? 'Depósito' : 'Retiro'} aprobado`,
+      `Tu ${payment.type === 'deposit' ? 'depósito' : 'retiro'} de $${payment.amount.toFixed(2)} ha sido aprobado y ${actionText} exitosamente.${payment.type === 'deposit' ? ' Tu saldo ha sido actualizado.' : ''}`,
+      String(payment._id),
+      { amount: payment.amount }
+    );
+
     res.json({
       message: `${payment.type === 'deposit' ? 'Depósito' : 'Retiro'} aprobado exitosamente`,
       payment,
@@ -253,6 +266,17 @@ export const rejectPayment = async (
       payment.description += ` - Rechazado: ${reason}`;
     }
     await payment.save();
+
+    // Crear notificación
+    const notifType = payment.type === 'deposit' ? 'deposit_rejected' : 'withdrawal_rejected';
+    await createNotification(
+      String(payment.userId),
+      notifType,
+      `${payment.type === 'deposit' ? 'Depósito' : 'Retiro'} rechazado`,
+      `Tu ${payment.type === 'deposit' ? 'depósito' : 'retiro'} de $${payment.amount.toFixed(2)} ha sido rechazado.${reason ? ` Motivo: ${reason}` : ''}`,
+      String(payment._id),
+      { amount: payment.amount, reason }
+    );
 
     res.json({
       message: `${payment.type === 'deposit' ? 'Depósito' : 'Retiro'} rechazado`,
