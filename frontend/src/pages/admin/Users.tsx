@@ -112,7 +112,6 @@ const Users = () => {
       phone: user.phone || '',
       address: user.address || '',
       role: user.role,
-      balance: user.balance,
     });
     setShowEditModal(true);
   };
@@ -152,7 +151,6 @@ const Users = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         role: formData.role,
-        balance: formData.balance,
         phone: formData.phone,
         address: formData.address,
       };
@@ -373,15 +371,15 @@ const Users = () => {
 
         {/* Modal Crear Usuario */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold">Crear Nuevo Usuario</h2>
                 <button onClick={closeModals} className="text-gray-500 hover:text-gray-700">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleCreateUser} className="space-y-4">
+              <form id="createUserForm" onSubmit={handleCreateUser} className="overflow-y-auto px-6 py-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email*</label>
                   <input
@@ -393,13 +391,16 @@ const Users = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario*</label>
                   <input
                     type="text"
+                    required
+                    minLength={3}
+                    maxLength={20}
                     value={formData.username || ''}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="Nombre público del usuario"
+                    placeholder="Usuario público (3-20 caracteres)"
                   />
                 </div>
                 <div>
@@ -456,37 +457,38 @@ const Users = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={closeModals}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    Crear Usuario
-                  </button>
-                </div>
               </form>
+              <div className="flex gap-3 px-6 py-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closeModals}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="createUserForm"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Crear Usuario
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* Modal Editar Usuario */}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] flex flex-col">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold">Editar Usuario</h2>
                 <button onClick={closeModals} className="text-gray-500 hover:text-gray-700">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleEditUser} className="space-y-4">
+              <form id="editUserForm" onSubmit={handleEditUser} className="overflow-y-auto px-6 py-4 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
@@ -542,17 +544,6 @@ const Users = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Balance</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.balance || 0}
-                    onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                   <input
                     type="tel"
@@ -570,22 +561,23 @@ const Users = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={closeModals}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    Guardar Cambios
-                  </button>
-                </div>
               </form>
+              <div className="flex gap-3 px-6 py-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closeModals}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  form="editUserForm"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
             </div>
           </div>
         )}
