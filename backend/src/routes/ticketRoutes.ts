@@ -4,6 +4,8 @@ import {
   purchaseTicket,
   getUserTickets,
   getAllLotteryTickets,
+  getAllTicketsAdmin,
+  cancelTicket,
   verifyTicket,
   getTicketByNumber,
   verifyTicketByLotteryAndNumber,
@@ -35,11 +37,25 @@ router.post(
 router.get('/', authenticate, getUserTickets);
 
 /**
+ * @route   GET /api/tickets/admin/all
+ * @desc    Obtiene TODOS los boletos de TODOS los sorteos (Admin/Gerente)
+ * @access  Private (Admin/Gerente)
+ */
+router.get('/admin/all', authenticate, isAdminOrGerente, getAllTicketsAdmin);
+
+/**
  * @route   GET /api/tickets/lottery/all
  * @desc    Obtiene todos los boletos de un sorteo (Admin/Gerente)
  * @access  Private (Admin/Gerente)
  */
 router.get('/lottery/all', authenticate, isAdminOrGerente, getAllLotteryTickets);
+
+/**
+ * @route   POST /api/tickets/:id/cancel
+ * @desc    Anula un boleto con opción de reintegro (Admin/Gerente)
+ * @access  Private (Admin/Gerente)
+ */
+router.post('/:id/cancel', authenticate, isAdminOrGerente, cancelTicket);
 
 /**
  * @route   GET /api/tickets/verify/:verificationCode

@@ -88,6 +88,13 @@ export const ticketAPI = {
 
   getAllLotteryTickets: (params?: any) => api.get('/tickets/lottery/all', { params }),
 
+  // Nuevo: Obtiene TODOS los tickets de TODOS los sorteos (Admin)
+  getAllTicketsAdmin: (params?: any) => api.get('/tickets/admin/all', { params }),
+
+  // Nuevo: Anula un boleto con opción de reintegro
+  cancel: (id: string, data: { refundType: 'full' | 'partial' | 'none'; refundPercentage?: number; reason?: string }) =>
+    api.post(`/tickets/${id}/cancel`, data),
+
   verifyByCode: (code: string) => api.get(`/tickets/verify/${code}`),
 
   getByNumber: (number: string) => api.get(`/tickets/number/${number}`),

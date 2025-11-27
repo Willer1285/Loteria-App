@@ -11,6 +11,7 @@ import {
   validateNumbers,
 } from '../utils/ticketGenerator';
 import { createNotification } from './notificationController';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Compra un boleto de lotería
@@ -288,6 +289,51 @@ export const getAllLotteryTickets = async (
 };
 
 /**
+ * Obtiene TODOS los boletos de TODOS los sorteos (solo para admin/gerente)
+ */
+export const getAllTicketsAdmin = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { status, limit, page } = req.query;
+
+    const filter: any = {};
+    if (status) filter.status = status;
+
+    let query = Ticket.find(filter)
+      .populate('userId', 'firstName lastName email username')
+      .populate('lotteryId', 'name controlNumber ticketPrice')
+      .sort({ purchaseDate: -1 });
+
+    // Aplicar paginación si se especifica
+    if (limit) {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit);
+      query = query
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum);
+    }
+
+    const tickets = await query;
+    const total = await Ticket.countDocuments(filter);
+
+    res.json({
+      tickets,
+      total,
+      pagination: limit ? {
+        page: Number(page) || 1,
+        limit: Number(limit),
+        pages: Math.ceil(total / Number(limit))
+      } : undefined
+    });
+  } catch (error) {
+    console.error('Error al obtener todos los tickets:', error);
+    res.status(500).json({ error: 'Error al obtener tickets' });
+  }
+};
+
+/**
  * Verifica un boleto por código
  */
 export const verifyTicket = async (
@@ -380,5 +426,131 @@ export const verifyTicketByLotteryAndNumber = async (
     res.json({ ticket });
   } catch (error) {
     res.status(500).json({ error: 'Error al verificar boleto' });
+  }
+};
+
+/**
+ * Anula un boleto y reintegra dinero al usuario (solo admin/gerente)
+ */
+export const cancelTicket = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { refundType, refundPercentage, reason } = req.body;
+
+    // Validar tipo de reintegro
+    if (!['full', 'partial', 'none'].includes(refundType)) {
+      res.status(400).json({ error: 'Tipo de reintegro inválido. Opciones: full, partial, none' });
+      return;
+    }
+
+    // Validar porcentaje si es parcial
+    if (refundType === 'partial' && (!refundPercentage || refundPercentage < 0 || refundPercentage > 100)) {
+      res.status(400).json({ error: 'El porcentaje de reintegro debe estar entre 0 y 100' });
+      return;
+    }
+
+    const ticket = await Ticket.findById(id)
+      .populate('userId')
+      .populate('lotteryId');
+
+    if (!ticket) {
+      res.status(404).json({ error: 'Boleto no encontrado' });
+      return;
+    }
+
+    // No permitir anular boletos ya cancelados
+    if (ticket.status === 'cancelled') {
+      res.status(400).json({ error: 'El boleto ya está cancelado' });
+      return;
+    }
+
+    // No permitir anular boletos ganadores que ya cobraron
+    if (ticket.status === 'won' && ticket.prize && ticket.prize > 0) {
+      res.status(400).json({ error: 'No se puede anular un boleto ganador que ya cobró premio' });
+      return;
+    }
+
+    const user = ticket.userId as any;
+    const lottery = ticket.lotteryId as any;
+
+    // Calcular el monto de reintegro
+    let refundAmount = 0;
+    if (refundType === 'full') {
+      refundAmount = ticket.price;
+    } else if (refundType === 'partial') {
+      refundAmount = (ticket.price * refundPercentage!) / 100;
+    }
+
+    // Actualizar balance del usuario si hay reintegro
+    if (refundAmount > 0 && user) {
+      await User.findByIdAndUpdate(user._id, {
+        $inc: {
+          balance: refundAmount,
+          totalSpent: -ticket.price // Restar del total gastado
+        }
+      });
+
+      // Crear registro de pago del reintegro
+      await Payment.create({
+        userId: user._id,
+        amount: refundAmount,
+        type: 'deposit',
+        status: 'completed',
+        method: 'refund',
+        transactionId: `REFUND-${uuidv4()}`,
+        description: `Reintegro por cancelación de boleto ${ticket.ticketNumber} - ${refundType === 'full' ? 'Total' : `${refundPercentage}%`}${reason ? ` - Motivo: ${reason}` : ''}`,
+        ticketId: ticket._id,
+        lotteryId: lottery?._id,
+        processedAt: new Date(),
+        metadata: { refundType, refundPercentage, originalPrice: ticket.price, reason }
+      });
+    }
+
+    // Actualizar el boleto
+    ticket.status = 'cancelled';
+    await ticket.save();
+
+    // Actualizar contador de boletos vendidos de la lotería
+    if (lottery) {
+      await Lottery.findByIdAndUpdate(lottery._id, {
+        $inc: { soldTickets: -1 }
+      });
+    }
+
+    // Enviar notificación al usuario
+    if (user) {
+      const refundText = refundAmount > 0
+        ? `Se te ha reintegrado $${refundAmount.toFixed(2)} (${refundType === 'full' ? '100%' : `${refundPercentage}%`}) a tu saldo.`
+        : 'No se realizó reintegro.';
+
+      await createNotification(
+        String(user._id),
+        'profile_updated',
+        'Boleto cancelado ❌',
+        `Tu boleto ${ticket.ticketNumber} para el sorteo "${lottery?.name || 'N/A'}" ha sido cancelado por el administrador. ${refundText}${reason ? ` Motivo: ${reason}` : ''}`,
+        String(ticket._id),
+        {
+          ticketNumber: ticket.ticketNumber,
+          lotteryName: lottery?.name,
+          refundType,
+          refundAmount,
+          originalPrice: ticket.price,
+          reason
+        }
+      );
+    }
+
+    res.json({
+      message: 'Boleto cancelado exitosamente',
+      ticket,
+      refundAmount,
+      refundType
+    });
+  } catch (error) {
+    console.error('Error al cancelar boleto:', error);
+    res.status(500).json({ error: 'Error al cancelar boleto' });
   }
 };
