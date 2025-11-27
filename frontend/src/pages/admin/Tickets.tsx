@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { ticketAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Search, Filter, Calendar, User, Ticket, FileText, Download } from 'lucide-react';
+import { Search, Filter, Calendar, User, Ticket, FileText, Download, XCircle, X } from 'lucide-react';
 
 const Tickets = () => {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -18,6 +18,15 @@ const Tickets = () => {
     controlNumber: '',
   });
 
+  // Modal de anulación
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [cancelData, setCancelData] = useState({
+    refundType: 'full' as 'full' | 'partial' | 'none',
+    refundPercentage: 100,
+    reason: '',
+  });
+
   useEffect(() => {
     loadTickets();
   }, []);
@@ -28,11 +37,13 @@ const Tickets = () => {
 
   const loadTickets = async () => {
     try {
-      // Get all tickets (admin view)
-      const response = await ticketAPI.getUserTickets({ limit: 1000 });
+      setLoading(true);
+      // Usar el nuevo endpoint que obtiene TODOS los tickets
+      const response = await ticketAPI.getAllTicketsAdmin({ limit: 10000 });
       setTickets(response.data.tickets || []);
     } catch (error) {
       toast.error('Error al cargar boletos');
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -127,6 +138,50 @@ const Tickets = () => {
     });
   };
 
+  const openCancelModal = (ticket: any) => {
+    setSelectedTicket(ticket);
+    setCancelData({
+      refundType: 'full',
+      refundPercentage: 100,
+      reason: '',
+    });
+    setShowCancelModal(true);
+  };
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setSelectedTicket(null);
+  };
+
+  const handleCancelTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedTicket) return;
+
+    if (cancelData.refundType === 'partial' && (cancelData.refundPercentage < 0 || cancelData.refundPercentage > 100)) {
+      toast.error('El porcentaje debe estar entre 0 y 100');
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de anular este boleto? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      await ticketAPI.cancel(selectedTicket._id, {
+        refundType: cancelData.refundType,
+        refundPercentage: cancelData.refundType === 'partial' ? cancelData.refundPercentage : undefined,
+        reason: cancelData.reason || undefined,
+      });
+
+      toast.success('Boleto anulado exitosamente');
+      closeCancelModal();
+      loadTickets();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al anular boleto');
+    }
+  };
+
   const handleExport = () => {
     // Basic CSV export
     const csvContent = [
@@ -183,6 +238,22 @@ const Tickets = () => {
     ).size;
 
     return { totalTickets, totalAmount, uniqueUsers, uniqueLotteries };
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+      case 'pending':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Activo</span>;
+      case 'won':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ganador</span>;
+      case 'lost':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Perdedor</span>;
+      case 'cancelled':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Anulado</span>;
+      default:
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+    }
   };
 
   const stats = calculateStats();
@@ -426,6 +497,12 @@ const Tickets = () => {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
                     Monto
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -489,6 +566,20 @@ const Tickets = () => {
                         ${ticket.price?.toFixed(2)}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(ticket.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {ticket.status !== 'cancelled' && ticket.status !== 'won' && (
+                        <button
+                          onClick={() => openCancelModal(ticket)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Anular boleto"
+                        >
+                          <XCircle size={20} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -503,6 +594,129 @@ const Tickets = () => {
             )}
           </div>
         </div>
+
+        {/* Modal Anular Boleto */}
+        {showCancelModal && selectedTicket && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Anular Boleto</h2>
+                <button onClick={closeCancelModal} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">Boleto: <span className="font-semibold">{selectedTicket.ticketNumber}</span></p>
+                <p className="text-sm text-gray-600">Usuario: <span className="font-semibold">{selectedTicket.userId?.firstName} {selectedTicket.userId?.lastName}</span></p>
+                <p className="text-sm text-gray-600">Sorteo: <span className="font-semibold">{selectedTicket.lotteryId?.name}</span></p>
+                <p className="text-sm text-gray-600">Monto: <span className="font-semibold text-green-600">${selectedTicket.price?.toFixed(2)}</span></p>
+              </div>
+
+              <form onSubmit={handleCancelTicket} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Reintegro*
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="refundType"
+                        value="full"
+                        checked={cancelData.refundType === 'full'}
+                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'full', refundPercentage: 100 })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Reintegro Total (100%)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="refundType"
+                        value="partial"
+                        checked={cancelData.refundType === 'partial'}
+                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'partial' })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Reintegro Parcial (%)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="refundType"
+                        value="none"
+                        checked={cancelData.refundType === 'none'}
+                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'none', refundPercentage: 0 })}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Sin Reintegro</span>
+                    </label>
+                  </div>
+                </div>
+
+                {cancelData.refundType === 'partial' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Porcentaje de Reintegro (0-100)*
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      required
+                      value={cancelData.refundPercentage}
+                      onChange={(e) => setCancelData({ ...cancelData, refundPercentage: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Reintegro: ${((selectedTicket.price * cancelData.refundPercentage) / 100).toFixed(2)}
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Motivo de Anulación (Opcional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={cancelData.reason}
+                    onChange={(e) => setCancelData({ ...cancelData, reason: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Explica por qué se anula este boleto..."
+                  />
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ Esta acción es irreversible. El boleto quedará marcado como "Anulado" y {
+                      cancelData.refundType === 'full' ? 'se reintegrará el 100% del monto' :
+                      cancelData.refundType === 'partial' ? `se reintegrará el ${cancelData.refundPercentage}% del monto` :
+                      'NO se reintegrará ningún monto'
+                    } al usuario.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={closeCancelModal}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Anular Boleto
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
