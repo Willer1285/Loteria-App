@@ -148,8 +148,11 @@ const Users = () => {
 
     try {
       const updateData: any = {
+        username: formData.username,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        role: formData.role,
+        balance: formData.balance,
         phone: formData.phone,
         address: formData.address,
       };
@@ -390,6 +393,16 @@ const Users = () => {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
+                  <input
+                    type="text"
+                    value={formData.username || ''}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Nombre público del usuario"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña*</label>
                   <input
                     type="password"
@@ -484,6 +497,16 @@ const Users = () => {
                   />
                   <p className="text-xs text-gray-500 mt-1">El email no se puede editar</p>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de Usuario</label>
+                  <input
+                    type="text"
+                    value={formData.username || ''}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    placeholder="Nombre público del usuario"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre*</label>
@@ -505,6 +528,29 @@ const Users = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rol*</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="jugador">Jugador</option>
+                    <option value="gerente">Gerente</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Balance</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.balance || 0}
+                    onChange={(e) => setFormData({ ...formData, balance: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>

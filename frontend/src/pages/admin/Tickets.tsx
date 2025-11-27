@@ -8,6 +8,7 @@ const Tickets = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     searchTerm: '',
     startDate: '',
@@ -38,12 +39,20 @@ const Tickets = () => {
   const loadTickets = async () => {
     try {
       setLoading(true);
+      setError(null);
+      console.log('Cargando tickets desde el endpoint admin...');
       // Usar el nuevo endpoint que obtiene TODOS los tickets
       const response = await ticketAPI.getAllTicketsAdmin({ limit: 10000 });
+      console.log('Respuesta del servidor:', response.data);
       setTickets(response.data.tickets || []);
-    } catch (error) {
-      toast.error('Error al cargar boletos');
-      console.error(error);
+      toast.success(`${response.data.tickets?.length || 0} boletos cargados`);
+    } catch (error: any) {
+      console.error('Error al cargar boletos:', error);
+      console.error('Detalles del error:', error.response?.data);
+      const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar boletos';
+      setError(errorMessage);
+      toast.error('Error al cargar boletos. Revisa la consola para más detalles.');
+      setTickets([]); // Asegurar que se muestre la tabla vacía en caso de error
     } finally {
       setLoading(false);
     }
@@ -271,6 +280,26 @@ const Tickets = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <XCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error al cargar los boletos</h3>
+                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <button
+                  onClick={loadTickets}
+                  className="mt-2 text-sm font-medium text-red-600 hover:text-red-500"
+                >
+                  Intentar de nuevo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
