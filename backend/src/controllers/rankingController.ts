@@ -17,16 +17,14 @@ export const getTopBuyers = async (
     const topBuyers = await User.find({ role: 'jugador' })
       .sort({ ticketsPurchased: -1 })
       .limit(Number(limit))
-      .select('firstName lastName email ticketsPurchased totalSpent');
+      .select('username ticketsPurchased totalSpent');
 
     res.json({
       ranking: topBuyers.map((user, index) => ({
         position: index + 1,
         user: {
           id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
+          username: user.username,
         },
         ticketsPurchased: user.ticketsPurchased,
         totalSpent: user.totalSpent,
@@ -50,16 +48,14 @@ export const getTopWinners = async (
     const topWinners = await User.find({ role: 'jugador', totalWon: { $gt: 0 } })
       .sort({ totalWon: -1 })
       .limit(Number(limit))
-      .select('firstName lastName email totalWon ticketsPurchased');
+      .select('username totalWon ticketsPurchased');
 
     res.json({
       ranking: topWinners.map((user, index) => ({
         position: index + 1,
         user: {
           id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
+          username: user.username,
         },
         totalWon: user.totalWon,
         ticketsPurchased: user.ticketsPurchased,
@@ -83,16 +79,14 @@ export const getTopSpenders = async (
     const topSpenders = await User.find({ role: 'jugador' })
       .sort({ totalSpent: -1 })
       .limit(Number(limit))
-      .select('firstName lastName email totalSpent totalWon ticketsPurchased');
+      .select('username totalSpent totalWon ticketsPurchased');
 
     res.json({
       ranking: topSpenders.map((user, index) => ({
         position: index + 1,
         user: {
           id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
+          username: user.username,
         },
         totalSpent: user.totalSpent,
         totalWon: user.totalWon,
@@ -177,7 +171,7 @@ export const getRankingByLottery = async (
     // Poblar información de usuarios
     const userIds = tickets.map((t) => t._id);
     const users = await User.find({ _id: { $in: userIds } }).select(
-      'firstName lastName avatar email'
+      'username avatar'
     );
 
     const userMap = new Map(users.map((u) => [String(u._id), u]));
@@ -188,10 +182,8 @@ export const getRankingByLottery = async (
         position: index + 1,
         user: {
           id: t._id,
-          firstName: user?.firstName || 'N/A',
-          lastName: user?.lastName || '',
+          username: user?.username || 'N/A',
           avatar: user?.avatar,
-          email: user?.email,
         },
         totalTickets: t.totalTickets,
         totalSpent: t.totalSpent,
@@ -267,7 +259,7 @@ export const getMonthlyRanking = async (
       ...lotteriesWon.map((t) => t._id),
     ];
     const users = await User.find({ _id: { $in: allUserIds } }).select(
-      'firstName lastName avatar email'
+      'username avatar'
     );
 
     const userMap = new Map(users.map((u) => [String(u._id), u]));
@@ -278,10 +270,8 @@ export const getMonthlyRanking = async (
         position: index + 1,
         user: {
           id: t._id,
-          firstName: user?.firstName || 'N/A',
-          lastName: user?.lastName || '',
+          username: user?.username || 'N/A',
           avatar: user?.avatar,
-          email: user?.email,
         },
         totalTickets: t.totalTickets,
         totalSpent: t.totalSpent,
@@ -294,10 +284,8 @@ export const getMonthlyRanking = async (
         position: index + 1,
         user: {
           id: t._id,
-          firstName: user?.firstName || 'N/A',
-          lastName: user?.lastName || '',
+          username: user?.username || 'N/A',
           avatar: user?.avatar,
-          email: user?.email,
         },
         lotteriesWon: t.lotteriesWon,
         totalPrizes: t.totalPrizes,
@@ -370,7 +358,7 @@ export const getYearlyRanking = async (
       ...lotteriesWon.map((t) => t._id),
     ];
     const users = await User.find({ _id: { $in: allUserIds } }).select(
-      'firstName lastName avatar email'
+      'username avatar'
     );
 
     const userMap = new Map(users.map((u) => [String(u._id), u]));
@@ -381,10 +369,8 @@ export const getYearlyRanking = async (
         position: index + 1,
         user: {
           id: t._id,
-          firstName: user?.firstName || 'N/A',
-          lastName: user?.lastName || '',
+          username: user?.username || 'N/A',
           avatar: user?.avatar,
-          email: user?.email,
         },
         totalTickets: t.totalTickets,
         totalSpent: t.totalSpent,
@@ -397,10 +383,8 @@ export const getYearlyRanking = async (
         position: index + 1,
         user: {
           id: t._id,
-          firstName: user?.firstName || 'N/A',
-          lastName: user?.lastName || '',
+          username: user?.username || 'N/A',
           avatar: user?.avatar,
-          email: user?.email,
         },
         lotteriesWon: t.lotteriesWon,
         totalPrizes: t.totalPrizes,

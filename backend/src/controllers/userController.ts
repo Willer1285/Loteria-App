@@ -77,11 +77,21 @@ export const updateUser = async (
       return;
     }
 
-    // Los usuarios normales no pueden cambiar su rol o estado
+    // Los usuarios normales no pueden cambiar su rol, estado, balance ni username
     if (req.user?.role !== 'admin') {
       delete updates.role;
       delete updates.isActive;
       delete updates.balance;
+      delete updates.username;
+    }
+
+    // Si el admin está actualizando el username, verificar que sea único
+    if (updates.username && req.user?.role === 'admin') {
+      const existingUser = await User.findOne({ username: updates.username, _id: { $ne: id } });
+      if (existingUser) {
+        res.status(400).json({ error: 'El nombre de usuario ya está en uso' });
+        return;
+      }
     }
 
     const user = await User.findByIdAndUpdate(

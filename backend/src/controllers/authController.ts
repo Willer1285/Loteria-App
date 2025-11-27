@@ -5,6 +5,47 @@ import User from '../models/User';
 import { validationResult } from 'express-validator';
 
 /**
+ * Genera un username único basado en el email
+ */
+async function generateUsername(email: string, existingUserId?: string): Promise<string> {
+  const emailPart = email.split('@')[0];
+  let baseUsername = emailPart
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .substring(0, 20);
+
+  if (baseUsername.length < 3) {
+    baseUsername = 'user' + Math.floor(Math.random() * 10000);
+  }
+
+  let username = baseUsername;
+  let counter = 1;
+
+  const query = existingUserId
+    ? { username, _id: { $ne: existingUserId } }
+    : { username };
+
+  while (await User.findOne(query)) {
+    const suffix = counter.toString();
+    username = baseUsername.substring(0, 20 - suffix.length) + suffix;
+    counter++;
+  }
+
+  return username;
+}
+
+/**
+ * Asegura que un usuario tenga username (genera uno si no existe)
+ */
+async function ensureUsername(user: any): Promise<void> {
+  if (!user.username || user.username === '') {
+    user.username = await generateUsername(user.email, user._id);
+    await user.save();
+    console.log(`✅ Username generado automáticamente para ${user.email}: ${user.username}`);
+  }
+}
+
+/**
  * Registra un nuevo usuario
  */
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -15,18 +56,30 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { email, password, firstName, lastName, phone, address } = req.body;
+    const { email, username, password, firstName, lastName, phone, address } = req.body;
 
-    // Verificar si el usuario ya existe
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Verificar si el email ya existe
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       res.status(400).json({ error: 'El email ya está registrado' });
       return;
     }
 
-    // Crear nuevo usuario
+    // Verificar si el username ya existe
+    if (username) {
+      const existingUsername = await User.findOne({ username });
+      if (existingUsername) {
+        res.status(400).json({ error: 'El nombre de usuario ya está en uso' });
+        return;
+      }
+    }
+
+    // Crear nuevo usuario con username (si no se proporciona, se genera automáticamente)
+    const finalUsername = username || await generateUsername(email);
+
     const user = await User.create({
       email,
+      username: finalUsername,
       password,
       firstName,
       lastName,
@@ -47,6 +100,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
@@ -97,6 +151,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Asegurar que el usuario tenga username (migración automática)
+    await ensureUsername(user);
+
     // Generar token
     const jwtSecret = process.env.JWT_SECRET || 'default-secret';
     const token = jwt.sign(
@@ -110,6 +167,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
@@ -133,10 +191,14 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   try {
     const user = (req as any).user;
 
+    // Asegurar que el usuario tenga username (migración automática)
+    await ensureUsername(user);
+
     res.json({
       user: {
         id: user._id,
         email: user.email,
+        username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
