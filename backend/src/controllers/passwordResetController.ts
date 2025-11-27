@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import User from '../models/User';
 import { validationResult } from 'express-validator';
 import { emailService } from '../services/emailService';
+import { createNotification } from './notificationController';
 
 /**
  * Solicita un reseteo de contraseña
@@ -107,6 +108,16 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
+
+    // Enviar notificación de contraseña reseteada
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Contraseña restablecida exitosamente 🔐',
+      'Tu contraseña ha sido restablecida exitosamente mediante el proceso de recuperación. Si no fuiste tú quien realizó este cambio, por favor contacta al administrador inmediatamente.',
+      String(user._id),
+      { passwordReset: true }
+    );
 
     res.json({
       message: 'Contraseña actualizada exitosamente. Ahora puedes iniciar sesión.',

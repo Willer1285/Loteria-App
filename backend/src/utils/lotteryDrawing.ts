@@ -115,10 +115,29 @@ export const performDraw = async (lotteryId: string, manualWinningNumbers?: numb
     ticket => !winners.some(w => String(w.ticketId) === String(ticket._id))
   );
 
+  // Obtener usuarios únicos que no ganaron para enviar notificación
+  const losingUserIds = new Set<string>();
+
   for (const ticket of losingTickets) {
     ticket.status = 'lost';
     ticket.matchedNumbers = 0;
     await ticket.save();
+    losingUserIds.add(String(ticket.userId));
+  }
+
+  // Enviar notificación a los participantes que no ganaron
+  for (const userId of losingUserIds) {
+    await createNotification(
+      userId,
+      'profile_updated',
+      'Sorteo finalizado',
+      `El sorteo "${lottery.name}" ha finalizado. Esta vez no has resultado ganador, pero te invitamos a seguir participando en nuestros próximos sorteos. ¡Buena suerte! 🍀`,
+      String(lottery._id),
+      {
+        lotteryName: lottery.name,
+        drawDate: lottery.drawDate
+      }
+    );
   }
 
   // Actualizar lotería con ganadores

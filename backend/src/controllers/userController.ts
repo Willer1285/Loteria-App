@@ -338,6 +338,19 @@ export const banUser = async (
       return;
     }
 
+    // Enviar notificación al usuario baneado
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Cuenta suspendida ⚠️',
+      `Tu cuenta ha sido suspendida. Motivo: ${user.bannedReason}. Por favor contacta al administrador para más información.`,
+      String(user._id),
+      {
+        bannedReason: user.bannedReason,
+        bannedAt: user.bannedAt
+      }
+    );
+
     res.json({
       message: 'Usuario baneado exitosamente',
       user,
@@ -372,6 +385,16 @@ export const unbanUser = async (
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
     }
+
+    // Enviar notificación al usuario desbaneado
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Cuenta restaurada ✅',
+      '¡Buenas noticias! Tu cuenta ha sido restaurada y ahora puedes acceder a todos los servicios de la plataforma. ¡Bienvenido de vuelta!',
+      String(user._id),
+      { accountRestored: true }
+    );
 
     res.json({
       message: 'Usuario restaurado exitosamente',
