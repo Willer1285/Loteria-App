@@ -10,6 +10,7 @@ import {
   generateRandomNumbers,
   validateNumbers,
 } from '../utils/ticketGenerator';
+import { createNotification } from './notificationController';
 
 /**
  * Compra un boleto de lotería
@@ -188,6 +189,22 @@ export const purchaseTicket = async (
       response.adjustedQuantity = quantity;
       response.requestedQuantity = originalQuantity;
     }
+
+    // Enviar notificación de compra
+    const ticketNumbers = tickets.map((t: any) => t.ticketNumber).join(', ');
+    await createNotification(
+      String(userId),
+      'profile_updated',
+      'Compra de boletos exitosa 🎟️',
+      `Has comprado ${quantity} boleto${quantity > 1 ? 's' : ''} para el sorteo "${lottery.name}" por un total de $${totalCost.toFixed(2)}. Números de boleto: ${ticketNumbers}. ¡Buena suerte!`,
+      String(lottery._id),
+      {
+        quantity,
+        totalCost,
+        lotteryName: lottery.name,
+        ticketNumbers: tickets.map((t: any) => t.ticketNumber)
+      }
+    );
 
     res.status(201).json(response);
   } catch (error) {

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User';
 import { validationResult } from 'express-validator';
+import { createNotification } from './notificationController';
 
 /**
  * Genera un username único basado en el email
@@ -93,6 +94,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       { userId: String(user._id) },
       jwtSecret,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
+    );
+
+    // Enviar notificación de bienvenida
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      '¡Bienvenido a Lotería App! 🎉',
+      `Hola ${user.firstName}, tu cuenta ha sido creada exitosamente. Tu nombre de usuario es "${user.username}". ¡Comienza a participar en nuestros sorteos y buena suerte!`,
+      String(user._id),
+      { isWelcome: true }
     );
 
     res.status(201).json({

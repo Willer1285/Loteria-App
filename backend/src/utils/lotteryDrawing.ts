@@ -3,6 +3,7 @@ import Ticket, { ITicket } from '../models/Ticket';
 import User from '../models/User';
 import Payment from '../models/Payment';
 import { generateRandomNumbers, countMatchingNumbers } from './ticketGenerator';
+import { createNotification } from '../controllers/notificationController';
 
 /**
  * Realiza el sorteo de una lotería
@@ -90,6 +91,22 @@ export const performDraw = async (lotteryId: string, manualWinningNumbers?: numb
         description: `Premio por lotería ${lottery.name} - Posición ${prize.position}`,
         processedAt: new Date(),
       });
+
+      // Enviar notificación de premio ganado
+      await createNotification(
+        String(winningTicket.userId),
+        'prize_won',
+        '¡Felicidades! Has ganado un premio 🏆',
+        `¡Enhorabuena! Has ganado el ${prize.position}° premio de $${prize.amount.toFixed(2)} en el sorteo "${lottery.name}". Tu número ganador fue ${winningNumber}. El dinero ha sido agregado a tu saldo.`,
+        String(lottery._id),
+        {
+          prize: prize.amount,
+          position: prize.position,
+          lotteryName: lottery.name,
+          ticketNumber: winningTicket.ticketNumber,
+          winningNumber: winningNumber
+        }
+      );
     }
   }
 

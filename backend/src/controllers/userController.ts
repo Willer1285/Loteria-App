@@ -558,6 +558,16 @@ export const updatePassword = async (
     user.password = newPassword;
     await user.save();
 
+    // Enviar notificación de cambio de contraseña
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Contraseña actualizada',
+      'Tu contraseña ha sido cambiada exitosamente. Si no fuiste tú quien realizó este cambio, por favor contacta al administrador inmediatamente.',
+      String(user._id),
+      { passwordChanged: true }
+    );
+
     res.json({
       message: 'Contraseña actualizada exitosamente',
     });
