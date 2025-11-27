@@ -31,7 +31,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin', permission: null },
     { icon: Ticket, label: 'Sorteos', path: '/admin/lotteries', permission: 'canManageLotteries' },
     { icon: Users, label: 'Usuarios', path: '/admin/users', permission: 'canManageUsers' },
-    { icon: ShoppingCart, label: 'Venta de Boletos', path: '/admin/ticket-sales', permission: 'canManageTickets' },
+    { icon: ShoppingCart, label: 'Venta de Boletos', path: '/admin/tickets', permission: 'canManageTickets' },
     { icon: DollarSign, label: 'Pagos', path: '/admin/payments', permission: 'canManagePayments' },
     { icon: Trophy, label: 'Rankings', path: '/admin/rankings', permission: 'canViewReports' },
     { icon: Mail, label: 'Correos', path: '/admin/emails', permission: 'canManageEmails' },
