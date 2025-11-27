@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth';
 import Lottery from '../models/Lottery';
+import Ticket from '../models/Ticket';
 import { validationResult } from 'express-validator';
 import { calculatePrizeDistribution, performDraw } from '../utils/lotteryDrawing';
+import { createNotification } from './notificationController';
 
 /**
  * Genera el número de control automáticamente
@@ -279,6 +281,29 @@ export const cancelLottery = async (
 
     lottery.status = 'cancelled';
     await lottery.save();
+
+    // Obtener todos los participantes únicos del sorteo
+    const tickets = await Ticket.find({ lotteryId: lottery._id });
+    const participantIds = new Set<string>();
+
+    tickets.forEach(ticket => {
+      participantIds.add(String(ticket.userId));
+    });
+
+    // Notificar a todos los participantes sobre la cancelación
+    for (const userId of participantIds) {
+      await createNotification(
+        userId,
+        'profile_updated',
+        'Sorteo cancelado ❌',
+        `El sorteo "${lottery.name}" ha sido cancelado. Si compraste boletos, tu dinero será reembolsado automáticamente. Disculpa las molestias.`,
+        String(lottery._id),
+        {
+          lotteryName: lottery.name,
+          controlNumber: lottery.controlNumber
+        }
+      );
+    }
 
     res.json({
       message: 'Lotería cancelada exitosamente',

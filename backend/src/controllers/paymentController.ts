@@ -31,6 +31,20 @@ export const deposit = async (req: AuthRequest, res: Response): Promise<void> =>
 
     const user = await User.findById(userId);
 
+    // Enviar notificación de solicitud recibida
+    await createNotification(
+      String(userId),
+      'profile_updated',
+      'Solicitud de depósito recibida 📥',
+      `Tu solicitud de depósito por $${amount.toFixed(2)} ha sido recibida y está pendiente de aprobación por el administrador. Te notificaremos cuando sea procesada.`,
+      String(payment._id),
+      {
+        amount,
+        method,
+        transactionId: payment.transactionId
+      }
+    );
+
     res.status(201).json({
       message: 'Solicitud de depósito creada. Pendiente de aprobación por administrador.',
       payment,
@@ -75,6 +89,21 @@ export const withdraw = async (req: AuthRequest, res: Response): Promise<void> =
       description: `Retiro de $${amount}`,
       metadata,
     });
+
+    // Enviar notificación de solicitud recibida
+    await createNotification(
+      String(userId),
+      'profile_updated',
+      'Solicitud de retiro recibida 📤',
+      `Tu solicitud de retiro por $${amount.toFixed(2)} ha sido recibida y está pendiente de aprobación por el administrador. Te notificaremos cuando sea procesada.`,
+      String(payment._id),
+      {
+        amount,
+        method,
+        transactionId: payment.transactionId,
+        currentBalance: user.balance
+      }
+    );
 
     res.status(201).json({
       message: 'Solicitud de retiro creada. Pendiente de aprobación por administrador.',

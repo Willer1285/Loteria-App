@@ -159,6 +159,16 @@ export const deactivateUser = async (
       return;
     }
 
+    // Enviar notificación de cuenta desactivada
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Cuenta desactivada ⚠️',
+      'Tu cuenta ha sido desactivada temporalmente por un administrador. Para más información, por favor contacta al soporte.',
+      String(user._id),
+      { accountDeactivated: true }
+    );
+
     res.json({
       message: 'Usuario desactivado exitosamente',
       user,
@@ -188,6 +198,16 @@ export const activateUser = async (
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
     }
+
+    // Enviar notificación de cuenta activada
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Cuenta activada ✅',
+      '¡Tu cuenta ha sido activada exitosamente! Ya puedes acceder a todos los servicios de la plataforma.',
+      String(user._id),
+      { accountActivated: true }
+    );
 
     res.json({
       message: 'Usuario activado exitosamente',
@@ -537,6 +557,19 @@ export const updateEmail = async (
       res.status(404).json({ error: 'Usuario no encontrado' });
       return;
     }
+
+    // Enviar notificación de cambio de email (alerta de seguridad)
+    await createNotification(
+      String(user._id),
+      'profile_updated',
+      'Email actualizado 📧',
+      `Tu dirección de email ha sido actualizada exitosamente a: ${email}. Si no fuiste tú quien realizó este cambio, por favor contacta al administrador inmediatamente.`,
+      String(user._id),
+      {
+        newEmail: email,
+        emailChanged: true
+      }
+    );
 
     res.json({
       message: 'Email actualizado exitosamente',
