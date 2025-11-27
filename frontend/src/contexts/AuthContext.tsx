@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 interface User {
   id: string;
   email: string;
+  username: string;
   firstName: string;
   lastName: string;
   role: 'admin' | 'gerente' | 'jugador';

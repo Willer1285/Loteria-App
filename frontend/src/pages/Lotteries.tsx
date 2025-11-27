@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, DollarSign, Ticket as TicketIcon, Trophy } from 'lucide-react';
+import { translateLotteryStatus } from '../utils/translations';
 
 const Lotteries = () => {
   const { user, refreshProfile } = useAuth();
@@ -17,6 +18,13 @@ const Lotteries = () => {
 
   useEffect(() => {
     loadLotteries();
+
+    // Auto-actualizar cada 60 segundos (optimizado)
+    const interval = setInterval(() => {
+      loadLotteries();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadLotteries = async () => {
@@ -87,13 +95,24 @@ const Lotteries = () => {
                 key={lottery._id}
                 className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
               >
+                {/* Imagen del sorteo */}
+                {lottery.image && (
+                  <div className="mb-4 rounded-lg overflow-hidden">
+                    <img
+                      src={lottery.image}
+                      alt={lottery.name}
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
                       {lottery.name}
                     </h2>
                     <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                      {lottery.status}
+                      {translateLotteryStatus(lottery.status)}
                     </span>
                   </div>
                   <Trophy className="text-yellow-500" size={32} />

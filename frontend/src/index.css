@@ -14,3 +14,40 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Animación de barra de progreso con rayas diagonales animadas */
+@keyframes progressStripes {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 28.28px 0;
+  }
+}
+
+.progress-bar-animated {
+  background: linear-gradient(to right, #0ea5e9, #0284c7);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 28.28px 28.28px;
+  animation: progressStripes 1s linear infinite;
+}

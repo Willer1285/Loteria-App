@@ -68,6 +68,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
   onClose,
 }) => {
   const [soldTickets, setSoldTickets] = useState<any[]>([]);
+  const [soldNumbers, setSoldNumbers] = useState<Set<number>>(new Set());
   const [loadingTickets, setLoadingTickets] = useState(false);
 
   useEffect(() => {
@@ -77,12 +78,24 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
   const loadTickets = async () => {
     setLoadingTickets(true);
     try {
-      // Try to get user tickets filtered by lottery
-      const response = await ticketAPI.getUserTickets({ lotteryId: lottery._id });
-      setSoldTickets(response.data.tickets || []);
+      // Get all tickets for this lottery (admin endpoint)
+      const response = await ticketAPI.getAllLotteryTickets({ lotteryId: lottery._id });
+      const tickets = response.data.tickets || [];
+      setSoldTickets(tickets);
+
+      // Extraer todos los números vendidos
+      const numbersSet = new Set<number>();
+      tickets.forEach((ticket: any) => {
+        if (ticket.numbers && ticket.numbers.length > 0) {
+          ticket.numbers.forEach((num: number) => numbersSet.add(num));
+        }
+      });
+      setSoldNumbers(numbersSet);
     } catch (error) {
+      console.error('Error loading lottery tickets:', error);
       // If endpoint doesn't support filtering, we'll just show counts
       setSoldTickets([]);
+      setSoldNumbers(new Set());
     } finally {
       setLoadingTickets(false);
     }
@@ -93,6 +106,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
       upcoming: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Próximamente' },
       active: { bg: 'bg-green-100', text: 'text-green-800', label: 'Activo' },
       drawing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Sorteando' },
+      pending_draw: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Sin Sortear' },
       completed: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Completado' },
       cancelled: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelado' },
     };
@@ -122,11 +136,9 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
     // Calculate padding based on max number (e.g., 999 = 3 digits, 9999 = 4 digits)
     const padding = max.toString().length;
 
-    // Show first 200 tickets to avoid performance issues
-    const displayLimit = Math.min(200, totalTickets);
-
-    for (let i = min; i < min + displayLimit; i++) {
-      const isSold = i < lottery.soldTickets; // Simplified - would need actual ticket data
+    // Mostrar TODOS los números del sorteo
+    for (let i = min; i <= max; i++) {
+      const isSold = soldNumbers.has(i);
       const ticketNumber = i.toString().padStart(padding, '0');
 
       tickets.push(
@@ -149,7 +161,7 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Tablero de Boletos</h3>
           <span className="text-sm text-gray-600">
-            Mostrando {displayLimit} de {totalTickets} boletos
+            Vendidos: {soldNumbers.size} de {totalTickets} boletos
           </span>
         </div>
         <div className="grid grid-cols-8 gap-2 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-lg">
@@ -228,9 +240,9 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                     {lottery.soldTickets}/{lottery.maxTickets}
                   </span>
                 </div>
-                <div className="w-full bg-white rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all"
+                    className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all progress-bar-animated"
                     style={{
                       width: `${(lottery.soldTickets / lottery.maxTickets) * 100}%`,
                     }}
@@ -347,17 +359,29 @@ const ManageLotteryModal: React.FC<ManageLotteryModalProps> = ({
                   {lottery.prizes.map((prize: any, idx: number) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
+                      className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold">
-                          {prize.position}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold">
+                            {prize.position}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-900 block">{prize.name}</span>
+                            {prize.type === 'physical' && (
+                              <span className="text-xs text-gray-600 bg-purple-100 px-2 py-1 rounded">Premio Físico</span>
+                            )}
+                          </div>
                         </div>
-                        <span className="font-semibold text-gray-900">{prize.name}</span>
+                        <span className="font-bold text-green-600 text-lg">
+                          ${(prize.amount || 0).toLocaleString()}
+                        </span>
                       </div>
-                      <span className="font-bold text-green-600 text-lg">
-                        ${(prize.amount || 0).toLocaleString()}
-                      </span>
+                      {prize.type === 'physical' && prize.description && (
+                        <p className="text-sm text-gray-700 mt-2 ml-13">
+                          {prize.description}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

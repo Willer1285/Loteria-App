@@ -75,7 +75,7 @@ export const lotteryAPI = {
   getById: (id: string) => api.get(`/lotteries/${id}`),
   create: (data: any) => api.post('/lotteries', data),
   update: (id: string, data: any) => api.put(`/lotteries/${id}`, data),
-  draw: (id: string) => api.post(`/lotteries/${id}/draw`),
+  draw: (id: string, data?: any) => api.post(`/lotteries/${id}/draw`, data),
   cancel: (id: string) => api.post(`/lotteries/${id}/cancel`),
 };
 
@@ -86,9 +86,14 @@ export const ticketAPI = {
 
   getUserTickets: (params?: any) => api.get('/tickets', { params }),
 
+  getAllLotteryTickets: (params?: any) => api.get('/tickets/lottery/all', { params }),
+
   verifyByCode: (code: string) => api.get(`/tickets/verify/${code}`),
 
   getByNumber: (number: string) => api.get(`/tickets/number/${number}`),
+
+  verifyByLotteryAndNumber: (params: { lotteryId: string; number: string }) =>
+    api.get('/tickets/verify-by-lottery', { params }),
 };
 
 // Payment API
@@ -102,6 +107,10 @@ export const paymentAPI = {
   getHistory: (params?: any) => api.get('/payments/history', { params }),
 
   getAll: (params?: any) => api.get('/payments/all', { params }),
+
+  approve: (id: string) => api.post(`/payments/${id}/approve`),
+
+  reject: (id: string, reason?: string) => api.post(`/payments/${id}/reject`, { reason }),
 };
 
 // Ranking API
@@ -141,6 +150,9 @@ export const userAPI = {
   activate: (id: string) => api.post(`/users/${id}/activate`),
   getStats: (id: string) => api.get(`/users/${id}/stats`),
   updateAvatar: (id: string, avatar: string) => api.put(`/users/${id}/avatar`, { avatar }),
+  updateEmail: (id: string, email: string) => api.put(`/users/${id}/email`, { email }),
+  updatePassword: (id: string, currentPassword: string, newPassword: string) =>
+    api.put(`/users/${id}/password`, { currentPassword, newPassword }),
 };
 
 // Settings API

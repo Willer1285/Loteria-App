@@ -6,19 +6,29 @@ import { Search, Plus, Edit, Eye, Play, Filter, Trash2 } from 'lucide-react';
 import CreateLotteryModal from '../../components/admin/CreateLotteryModal';
 import EditLotteryModal from '../../components/admin/EditLotteryModal';
 import ManageLotteryModal from '../../components/admin/ManageLotteryModal';
+import DrawLotteryModal from '../../components/admin/DrawLotteryModal';
+import { translateLotteryStatus } from '../../utils/translations';
 
 const Lotteries = () => {
   const [lotteries, setLotteries] = useState<any[]>([]);
   const [filteredLotteries, setFilteredLotteries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'pending_draw'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedLotteryForEdit, setSelectedLotteryForEdit] = useState<any>(null);
   const [selectedLotteryForView, setSelectedLotteryForView] = useState<any>(null);
+  const [selectedLotteryForDraw, setSelectedLotteryForDraw] = useState<any>(null);
 
   useEffect(() => {
     loadLotteries();
+
+    // Auto-actualizar cada 60 segundos (optimizado)
+    const interval = setInterval(() => {
+      loadLotteries();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -57,18 +67,8 @@ const Lotteries = () => {
     setFilteredLotteries(filtered);
   };
 
-  const handleDrawLottery = async (lotteryId: string) => {
-    if (!confirm('¿Estás seguro de realizar el sorteo? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    try {
-      await lotteryAPI.draw(lotteryId);
-      toast.success('Sorteo realizado exitosamente');
-      loadLotteries();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Error al realizar sorteo');
-    }
+  const handleDrawLottery = (lottery: any) => {
+    setSelectedLotteryForDraw(lottery);
   };
 
   const handleDeleteLottery = async (lotteryId: string, soldTickets: number) => {
@@ -145,6 +145,7 @@ const Lotteries = () => {
               >
                 <option value="all">Todos los sorteos</option>
                 <option value="active">Activos</option>
+                <option value="pending_draw">Sin Sortear</option>
                 <option value="completed">Completados</option>
               </select>
             </div>
@@ -182,14 +183,14 @@ const Lotteries = () => {
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         lottery.status === 'active'
                           ? 'bg-green-100 text-green-800'
+                          : lottery.status === 'pending_draw'
+                          ? 'bg-orange-100 text-orange-800'
                           : lottery.status === 'completed'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {lottery.status === 'active' && 'Activo'}
-                      {lottery.status === 'completed' && 'Completado'}
-                      {lottery.status === 'cancelled' && 'Cancelado'}
+                      {translateLotteryStatus(lottery.status)}
                     </span>
                   </div>
 
@@ -228,7 +229,7 @@ const Lotteries = () => {
                   <div className="mt-4">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-primary-600 h-2 rounded-full transition-all"
+                        className="bg-gradient-to-r from-primary-500 to-primary-600 h-2 rounded-full transition-all progress-bar-animated"
                         style={{
                           width: `${lottery.maxTickets > 0 ? ((lottery.soldTickets || 0) / lottery.maxTickets) * 100 : 0}%`,
                         }}
@@ -250,7 +251,7 @@ const Lotteries = () => {
                     <span>Ver</span>
                   </button>
 
-                  {lottery.status !== 'completed' && (
+                  {lottery.status !== 'completed' && lottery.status !== 'pending_draw' && (
                     <button
                       onClick={() => setSelectedLotteryForEdit(lottery)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
@@ -260,7 +261,7 @@ const Lotteries = () => {
                     </button>
                   )}
 
-                  {(lottery.soldTickets || 0) === 0 && lottery.status !== 'completed' && (
+                  {(lottery.soldTickets || 0) === 0 && lottery.status !== 'completed' && lottery.status !== 'pending_draw' && (
                     <button
                       onClick={() => handleDeleteLottery(lottery._id, lottery.soldTickets || 0)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
@@ -270,9 +271,9 @@ const Lotteries = () => {
                     </button>
                   )}
 
-                  {lottery.status === 'active' && (
+                  {lottery.status === 'pending_draw' && (
                     <button
-                      onClick={() => handleDrawLottery(lottery._id)}
+                      onClick={() => handleDrawLottery(lottery)}
                       className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
                     >
                       <Play size={16} />
@@ -330,6 +331,17 @@ const Lotteries = () => {
             onClose={() => setSelectedLotteryForView(null)}
             onSuccess={() => {
               setSelectedLotteryForView(null);
+              loadLotteries();
+            }}
+          />
+        )}
+
+        {selectedLotteryForDraw && (
+          <DrawLotteryModal
+            lottery={selectedLotteryForDraw}
+            onClose={() => setSelectedLotteryForDraw(null)}
+            onSuccess={() => {
+              setSelectedLotteryForDraw(null);
               loadLotteries();
             }}
           />

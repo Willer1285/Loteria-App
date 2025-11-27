@@ -19,7 +19,8 @@ export const purchaseTicket = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { lotteryId, numbers, quantity = 1 } = req.body;
+    const { lotteryId, numbers } = req.body;
+    let quantity = req.body.quantity || 1; // Usar let para poder reasignar
     const userId = req.user!._id;
 
     // Verificar que la lotería existe
@@ -47,7 +48,8 @@ export const purchaseTicket = async (
       return;
     }
 
-    const totalCost = lottery.ticketPrice * quantity;
+    let originalQuantity = quantity;
+    let totalCost = lottery.ticketPrice * quantity;
 
     // Verificar que el usuario tiene suficiente balance
     if (user.balance < totalCost) {
@@ -59,6 +61,60 @@ export const purchaseTicket = async (
 
     // Obtener el número de tickets existentes para este sorteo para generar números secuenciales
     const existingTicketsCount = await Ticket.countDocuments({ lotteryId: lottery._id });
+
+    // Si es compra al azar, primero obtener todos los números ya vendidos
+    let soldNumbers: number[] = [];
+    if (!numbers || numbers.length === 0) {
+      const existingTickets = await Ticket.find({
+        lotteryId: lottery._id
+      }).select('numbers');
+
+      soldNumbers = existingTickets.map(t => t.numbers[0]);
+    }
+
+    // Generar todos los números disponibles
+    let availableNumbers: number[] = [];
+    if (!numbers || numbers.length === 0) {
+      const { min, max } = lottery.numbersRange;
+      for (let num = min; num <= max; num++) {
+        if (!soldNumbers.includes(num)) {
+          availableNumbers.push(num);
+        }
+      }
+
+      // Verificar si hay suficientes números disponibles
+      if (availableNumbers.length < quantity) {
+        // Si no hay suficientes, solo vender los disponibles y notificar
+        const adjustedQuantity = availableNumbers.length;
+        const adjustedCost = lottery.ticketPrice * adjustedQuantity;
+
+        if (adjustedQuantity === 0) {
+          res.status(400).json({
+            error: 'No hay números disponibles para comprar.'
+          });
+          return;
+        }
+
+        // Verificar que el usuario tiene suficiente balance para la cantidad ajustada
+        if (user.balance < adjustedCost) {
+          res.status(400).json({ error: 'Saldo insuficiente' });
+          return;
+        }
+
+        // Actualizar cantidad y costo al número de boletos disponibles
+        quantity = adjustedQuantity;
+        totalCost = adjustedCost;
+      }
+
+      // Mezclar el array aleatoriamente (Fisher-Yates shuffle)
+      for (let i = availableNumbers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableNumbers[i], availableNumbers[j]] = [availableNumbers[j], availableNumbers[i]];
+      }
+    }
+
+    // Crear fecha de compra única para todos los boletos de esta transacción
+    const purchaseDate = new Date();
 
     // Crear los boletos
     for (let i = 0; i < quantity; i++) {
@@ -77,12 +133,8 @@ export const purchaseTicket = async (
         }
         ticketNumbers = numbers;
       } else {
-        // Generar números aleatorios
-        ticketNumbers = generateRandomNumbers(
-          lottery.numbersRange.min,
-          lottery.numbersRange.max,
-          lottery.numbersRange.count
-        );
+        // Tomar el siguiente número disponible (ya está mezclado aleatoriamente)
+        ticketNumbers = [availableNumbers[i]];
       }
 
       // Generar número secuencial: count actual + i + 1
@@ -94,6 +146,7 @@ export const purchaseTicket = async (
         userId: user._id,
         numbers: ticketNumbers,
         price: lottery.ticketPrice,
+        purchaseDate: purchaseDate,
         verificationCode: generateVerificationCode(),
       });
 
@@ -122,11 +175,21 @@ export const purchaseTicket = async (
       processedAt: new Date(),
     });
 
-    res.status(201).json({
+    // Preparar respuesta
+    const response: any = {
       message: 'Boleto(s) comprado(s) exitosamente',
       tickets,
       balance: user.balance,
-    });
+    };
+
+    // Si se compró menos de lo solicitado, agregar información
+    if (quantity < originalQuantity) {
+      response.warning = `Solo había ${quantity} números disponibles. Se compraron ${quantity} boletos de ${originalQuantity} solicitados.`;
+      response.adjustedQuantity = quantity;
+      response.requestedQuantity = originalQuantity;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al comprar boleto' });
@@ -142,29 +205,68 @@ export const getUserTickets = async (
 ): Promise<void> => {
   try {
     const userId = req.user!._id;
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, lotteryId, page, limit } = req.query;
 
     const filter: any = { userId };
     if (status) filter.status = status;
+    if (lotteryId) filter.lotteryId = lotteryId;
 
-    const tickets = await Ticket.find(filter)
+    let query = Ticket.find(filter)
       .sort({ purchaseDate: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit))
-      .populate('lotteryId', 'name drawDate status winningNumbers');
+      .populate('lotteryId', 'name drawDate status winningNumbers controlNumber');
 
+    // Solo aplicar paginación si se especifica limit
+    if (limit) {
+      const pageNum = Number(page) || 1;
+      const limitNum = Number(limit);
+      query = query
+        .limit(limitNum)
+        .skip((pageNum - 1) * limitNum);
+    }
+
+    const tickets = await query;
     const total = await Ticket.countDocuments(filter);
 
     res.json({
       tickets,
       pagination: {
         total,
-        page: Number(page),
-        pages: Math.ceil(total / Number(limit)),
+        page: limit ? Number(page) || 1 : 1,
+        pages: limit ? Math.ceil(total / Number(limit)) : 1,
       },
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener boletos' });
+  }
+};
+
+/**
+ * Obtiene todos los boletos de un sorteo (solo para admin/gerente)
+ */
+export const getAllLotteryTickets = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { lotteryId } = req.query;
+
+    if (!lotteryId) {
+      res.status(400).json({ error: 'Se requiere el ID del sorteo' });
+      return;
+    }
+
+    const filter: any = { lotteryId };
+
+    const tickets = await Ticket.find(filter)
+      .select('numbers status userId')
+      .sort({ purchaseDate: -1 });
+
+    res.json({
+      tickets,
+      total: tickets.length,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al obtener boletos del sorteo' });
   }
 };
 
@@ -221,5 +323,45 @@ export const getTicketByNumber = async (
     res.json({ ticket });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener boleto' });
+  }
+};
+
+/**
+ * Verifica un boleto por número comprado y sorteo
+ */
+export const verifyTicketByLotteryAndNumber = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { lotteryId, number } = req.query;
+
+    if (!lotteryId || !number) {
+      res.status(400).json({ error: 'Se requiere el ID del sorteo y el número' });
+      return;
+    }
+
+    const ticketNumber = Number(number);
+    if (isNaN(ticketNumber)) {
+      res.status(400).json({ error: 'El número debe ser válido' });
+      return;
+    }
+
+    // Buscar boleto que contenga el número en el sorteo específico
+    const ticket = await Ticket.findOne({
+      lotteryId,
+      numbers: ticketNumber,
+    })
+      .populate('userId', 'firstName lastName email')
+      .populate('lotteryId');
+
+    if (!ticket) {
+      res.status(404).json({ error: 'No se encontró ningún propietario con ese número de boleto en este sorteo' });
+      return;
+    }
+
+    res.json({ ticket });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al verificar boleto' });
   }
 };

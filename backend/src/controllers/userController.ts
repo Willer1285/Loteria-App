@@ -455,3 +455,89 @@ export const updateAvatar = async (
     res.status(500).json({ error: 'Error al actualizar avatar' });
   }
 };
+
+/**
+ * Actualiza el email de un usuario
+ */
+export const updateEmail = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    // Los usuarios solo pueden actualizar su propio email (a menos que sean admin)
+    if (req.user?.role !== 'admin' && String(req.user?._id) !== id) {
+      res.status(403).json({ error: 'No tienes permiso para actualizar este email' });
+      return;
+    }
+
+    // Verificar que el email no esté en uso
+    const existingUser = await User.findOne({ email });
+    if (existingUser && String(existingUser._id) !== id) {
+      res.status(400).json({ error: 'El email ya está en uso' });
+      return;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { email },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    res.json({
+      message: 'Email actualizado exitosamente',
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar email' });
+  }
+};
+
+/**
+ * Actualiza la contraseña de un usuario
+ */
+export const updatePassword = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+
+    // Los usuarios solo pueden actualizar su propia contraseña
+    if (String(req.user?._id) !== id) {
+      res.status(403).json({ error: 'No tienes permiso para actualizar esta contraseña' });
+      return;
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+      return;
+    }
+
+    // Verificar que la contraseña actual sea correcta
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      res.status(401).json({ error: 'Contraseña actual incorrecta' });
+      return;
+    }
+
+    // Actualizar contraseña (el hash se hace automáticamente por el middleware pre-save)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      message: 'Contraseña actualizada exitosamente',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar contraseña' });
+  }
+};

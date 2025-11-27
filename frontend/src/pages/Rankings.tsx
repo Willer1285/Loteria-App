@@ -19,13 +19,13 @@ const Rankings = () => {
       let response;
       switch (activeTab) {
         case 'buyers':
-          response = await rankingAPI.getTopBuyers(10);
+          response = await rankingAPI.getTopBuyers({ limit: 10 });
           break;
         case 'winners':
-          response = await rankingAPI.getTopWinners(10);
+          response = await rankingAPI.getTopWinners({ limit: 10 });
           break;
         case 'spenders':
-          response = await rankingAPI.getTopSpenders(10);
+          response = await rankingAPI.getTopSpenders({ limit: 10 });
           break;
       }
       setRankings(response.data.ranking);

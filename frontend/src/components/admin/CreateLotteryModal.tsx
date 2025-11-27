@@ -26,7 +26,7 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
   });
 
   const [prizes, setPrizes] = useState([
-    { name: '1er Premio', amount: '', position: 1 },
+    { name: '1er Premio', type: 'cash' as 'cash' | 'physical', amount: '', description: '', position: 1 },
   ]);
 
   const [randomButtons, setRandomButtons] = useState<number[]>([5, 10, 50]);
@@ -67,7 +67,7 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
   const addPrize = () => {
     setPrizes([
       ...prizes,
-      { name: `${prizes.length + 1}${prizes.length === 0 ? 'er' : prizes.length === 1 ? 'do' : 'to'} Premio`, amount: '', position: prizes.length + 1 },
+      { name: `${prizes.length + 1}${prizes.length === 0 ? 'er' : prizes.length === 1 ? 'do' : 'to'} Premio`, type: 'cash' as 'cash' | 'physical', amount: '', description: '', position: prizes.length + 1 },
     ]);
   };
 
@@ -120,7 +120,9 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
         maxTicketsPerPlayer: parseInt(formData.maxTicketsPerPlayer),
         prizes: prizes.map(p => ({
           name: p.name,
+          type: p.type,
           amount: parseFloat(p.amount),
+          description: p.description,
           position: p.position,
         })),
         numbersRange: {
@@ -142,8 +144,8 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl p-6 max-w-4xl w-full my-8">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl p-6 max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Crear Nuevo Sorteo</h2>
           <button
@@ -232,13 +234,14 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
           {/* Descripción */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Descripción *
+              Descripción * ({formData.description.length}/300)
             </label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows={3}
+              maxLength={300}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               placeholder="Descripción del sorteo..."
               required
@@ -332,35 +335,59 @@ const CreateLotteryModal: React.FC<CreateLotteryModalProps> = ({ onClose, onSucc
                 <span>Agregar Premio</span>
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {prizes.map((prize, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <input
-                    type="text"
-                    value={prize.name}
-                    onChange={(e) => updatePrize(index, 'name', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="Nombre del premio"
-                    required
-                  />
-                  <input
-                    type="number"
-                    value={prize.amount}
-                    onChange={(e) => updatePrize(index, 'amount', e.target.value)}
-                    className="w-40 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                    placeholder="Monto"
-                    step="0.01"
-                    min="0.01"
-                    required
-                  />
-                  {prizes.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removePrize(index)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      value={prize.name}
+                      onChange={(e) => updatePrize(index, 'name', e.target.value)}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="Nombre del premio"
+                      required
+                    />
+                    {prizes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removePrize(index)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <select
+                      value={prize.type}
+                      onChange={(e) => updatePrize(index, 'type', e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     >
-                      <Trash2 size={18} />
-                    </button>
+                      <option value="cash">Dinero</option>
+                      <option value="physical">Premio Físico</option>
+                    </select>
+
+                    <input
+                      type="number"
+                      value={prize.amount}
+                      onChange={(e) => updatePrize(index, 'amount', e.target.value)}
+                      className="w-48 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder={prize.type === 'cash' ? 'Monto' : 'Valor equivalente'}
+                      step="0.01"
+                      min="0.01"
+                      required
+                    />
+                  </div>
+
+                  {prize.type === 'physical' && (
+                    <input
+                      type="text"
+                      value={prize.description}
+                      onChange={(e) => updatePrize(index, 'description', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                      placeholder="Descripción del premio físico (ej: Toyota Corolla 2024, Casa en..."
+                    />
                   )}
                 </div>
               ))}

@@ -16,8 +16,11 @@ import {
 const Payments = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<any[]>([]);
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
+  const [completedPayments, setCompletedPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
   const [filters, setFilters] = useState({
     searchTerm: '',
     startDate: '',
@@ -40,7 +43,11 @@ const Payments = () => {
   const loadPayments = async () => {
     try {
       const response = await paymentAPI.getAll({ limit: 1000 });
-      setPayments(response.data.payments || []);
+      // Filtrar solo depósitos y retiros, excluir compras de boletos
+      const paymentsData = (response.data.payments || []).filter(
+        (p: any) => p.type === 'deposit' || p.type === 'withdrawal'
+      );
+      setPayments(paymentsData);
     } catch (error) {
       toast.error('Error al cargar pagos');
     } finally {
@@ -115,6 +122,10 @@ const Payments = () => {
     }
 
     setFilteredPayments(filtered);
+
+    // Separar pendientes y completadas
+    setPendingPayments(filtered.filter(p => p.status === 'pending'));
+    setCompletedPayments(filtered.filter(p => p.status === 'completed' || p.status === 'cancelled'));
   };
 
   const handleFilterChange = (field: string, value: string) => {
@@ -135,6 +146,33 @@ const Payments = () => {
       minAmount: '',
       maxAmount: '',
     });
+  };
+
+  const handleApprovePayment = async (paymentId: string) => {
+    if (!confirm('¿Estás seguro de aprobar esta transacción?')) {
+      return;
+    }
+
+    try {
+      await paymentAPI.approve(paymentId);
+      toast.success('Pago aprobado exitosamente');
+      loadPayments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al aprobar pago');
+    }
+  };
+
+  const handleRejectPayment = async (paymentId: string) => {
+    const reason = prompt('Razón del rechazo (opcional):');
+    if (reason === null) return; // Usuario canceló
+
+    try {
+      await paymentAPI.reject(paymentId, reason || undefined);
+      toast.success('Pago rechazado');
+      loadPayments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Error al rechazar pago');
+    }
   };
 
   const handleExport = () => {
@@ -418,15 +456,34 @@ const Payments = () => {
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Mostrando {filteredPayments.length} de {payments.length} transacciones
-          </p>
-        </div>
-
-        {/* Payments Table */}
+        {/* Tabs */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('pending')}
+                className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors ${
+                  activeTab === 'pending'
+                    ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Pendientes ({pendingPayments.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors ${
+                  activeTab === 'completed'
+                    ? 'bg-primary-50 text-primary-700 border-b-2 border-primary-600'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Realizadas ({completedPayments.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Payments Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
@@ -446,13 +503,18 @@ const Payments = () => {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
                     Monto
                   </th>
+                  {activeTab === 'completed' && (
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                      Estado
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredPayments.map((payment) => (
+                {(activeTab === 'pending' ? pendingPayments : completedPayments).map((payment) => (
                   <tr key={payment._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
@@ -500,21 +562,55 @@ const Payments = () => {
                         {payment.amount?.toFixed(2)}
                       </div>
                     </td>
+                    {activeTab === 'completed' && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            payment.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {payment.status === 'completed' ? 'Completado' : 'Cancelado'}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => setSelectedPayment(payment)}
-                        className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                      >
-                        <Eye size={16} />
-                        <span>Ver</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        {activeTab === 'pending' ? (
+                          <>
+                            <button
+                              onClick={() => handleApprovePayment(payment._id)}
+                              className="flex items-center space-x-1 px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                            >
+                              <span>✓</span>
+                              <span>Aprobar</span>
+                            </button>
+                            <button
+                              onClick={() => handleRejectPayment(payment._id)}
+                              className="flex items-center space-x-1 px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                            >
+                              <span>✕</span>
+                              <span>Rechazar</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedPayment(payment)}
+                            className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                          >
+                            <Eye size={16} />
+                            <span>Ver</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
-            {filteredPayments.length === 0 && (
+            {(activeTab === 'pending' ? pendingPayments : completedPayments).length === 0 && (
               <div className="text-center py-12">
                 <p className="text-gray-500 text-lg">
                   No se encontraron transacciones

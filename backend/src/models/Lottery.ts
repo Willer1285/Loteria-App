@@ -9,7 +9,7 @@ export interface ILottery extends Document {
   ticketPrice: number;
   totalPrize: number;
   drawDate: Date;
-  status: 'upcoming' | 'active' | 'drawing' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'active' | 'drawing' | 'completed' | 'cancelled' | 'pending_draw';
   maxTickets: number; // Cantidad total de boletos/números
   soldTickets: number;
   maxTicketsPerPlayer: number; // Máximo de boletos que puede comprar un jugador (0 = sin límite)
@@ -22,7 +22,9 @@ export interface ILottery extends Document {
   }[];
   prizes: {
     name: string; // Ej: "1er Lugar", "2do Lugar"
-    amount: number;
+    type: 'cash' | 'physical'; // Tipo de premio: dinero o físico
+    amount: number; // Monto en dinero o valor equivalente
+    description?: string; // Descripción del premio físico (ej: "Toyota Corolla 2024")
     position: number;
   }[];
   prizeDistribution: {
@@ -83,7 +85,7 @@ const LotterySchema = new Schema<ILottery>(
     },
     status: {
       type: String,
-      enum: ['upcoming', 'active', 'drawing', 'completed', 'cancelled'],
+      enum: ['upcoming', 'active', 'drawing', 'completed', 'cancelled', 'pending_draw'],
       default: 'upcoming',
     },
     maxTickets: {
@@ -125,10 +127,18 @@ const LotterySchema = new Schema<ILottery>(
           type: String,
           required: true,
         },
+        type: {
+          type: String,
+          enum: ['cash', 'physical'],
+          default: 'cash',
+        },
         amount: {
           type: Number,
           required: true,
           min: 0,
+        },
+        description: {
+          type: String,
         },
         position: {
           type: Number,

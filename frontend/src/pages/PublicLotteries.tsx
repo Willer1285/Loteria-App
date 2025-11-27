@@ -5,6 +5,7 @@ import { lotteryAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Calendar, DollarSign, Ticket as TicketIcon, Trophy, Lock, Clock, ArrowRight } from 'lucide-react';
+import { translateLotteryStatus } from '../utils/translations';
 
 // Countdown Timer Component
 const CountdownTimer: React.FC<{ targetDate: Date }> = ({ targetDate }) => {
@@ -67,6 +68,13 @@ const PublicLotteries = () => {
 
   useEffect(() => {
     loadLotteries();
+
+    // Auto-actualizar cada 60 segundos (optimizado)
+    const interval = setInterval(() => {
+      loadLotteries();
+    }, 60000); // 60 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   const loadLotteries = async () => {
@@ -279,7 +287,7 @@ const PublicLotteries = () => {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2.5">
                           <div
-                            className="bg-gradient-to-r from-primary-500 to-primary-600 h-2.5 rounded-full transition-all shadow-sm"
+                            className="bg-gradient-to-r from-primary-500 to-primary-600 h-2.5 rounded-full transition-all shadow-sm progress-bar-animated"
                             style={{ width: `${soldPercentage}%` }}
                           />
                         </div>
