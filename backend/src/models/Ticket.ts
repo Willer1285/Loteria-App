@@ -7,7 +7,7 @@ export interface ITicket extends Document {
   numbers: number[];
   purchaseDate: Date;
   price: number;
-  status: 'active' | 'won' | 'lost' | 'refunded';
+  status: 'active' | 'won' | 'lost' | 'refunded' | 'cancelled';
   isVerified: boolean;
   verificationCode: string;
   matchedNumbers?: number;
@@ -49,7 +49,7 @@ const TicketSchema = new Schema<ITicket>(
     },
     status: {
       type: String,
-      enum: ['active', 'won', 'lost', 'refunded'],
+      enum: ['active', 'won', 'lost', 'refunded', 'cancelled'],
       default: 'active',
     },
     isVerified: {
