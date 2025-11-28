@@ -342,6 +342,7 @@ export const getGroupedPurchasesAdmin = async (
 ): Promise<void> => {
   try {
     // Usar agregación de MongoDB para agrupar eficientemente
+    // OPTIMIZADO: Solo guardamos campos esenciales para evitar exceder límite de memoria
     const purchases = await Ticket.aggregate([
       {
         $lookup: {
@@ -395,7 +396,16 @@ export const getGroupedPurchasesAdmin = async (
           lotteryControlNumber: { $first: '$lottery.controlNumber' },
           ticketPrice: { $first: '$price' },
           purchaseDate: { $first: '$purchaseDateRounded' },
-          tickets: { $push: '$$ROOT' },
+          // Solo guardar campos esenciales en lugar de $$ROOT completo para ahorrar memoria
+          tickets: {
+            $push: {
+              _id: '$_id',
+              numbers: '$numbers',
+              status: '$status',
+              ticketNumber: '$ticketNumber',
+              price: '$price'
+            }
+          },
           quantity: { $sum: 1 },
           totalAmount: { $sum: '$price' },
           statuses: { $push: '$status' }
