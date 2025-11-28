@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { rankingAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Trophy, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Trophy, Ticket, Wallet } from 'lucide-react';
 
 const Rankings = () => {
   const [activeTab, setActiveTab] = useState<'buyers' | 'winners' | 'spenders'>('buyers');
@@ -69,8 +69,8 @@ const Rankings = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <ShoppingBag size={20} />
-            <span>Más Boletos</span>
+            <Ticket size={20} />
+            <span>Ticket Master</span>
           </button>
 
           <button
@@ -82,7 +82,7 @@ const Rankings = () => {
             }`}
           >
             <Trophy size={20} />
-            <span>Más Ganadores</span>
+            <span>Campeón</span>
           </button>
 
           <button
@@ -93,8 +93,8 @@ const Rankings = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <TrendingUp size={20} />
-            <span>Más Gastado</span>
+            <Wallet size={20} />
+            <span>Tiburón</span>
           </button>
         </div>
 
