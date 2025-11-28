@@ -2,149 +2,220 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { ticketAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Search, Filter, Calendar, User, Ticket, FileText, Download, XCircle, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Search, Eye, Calendar, DollarSign, Ticket, Hash, Package, User, XCircle, X, AlertTriangle } from 'lucide-react';
+
+interface Purchase {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userUsername?: string;
+  lotteryId: string;
+  lotteryName: string;
+  lotteryControlNumber: string;
+  ticketPrice: number;
+  purchaseDate: Date;
+  tickets: any[];
+  totalAmount: number;
+  quantity: number;
+  status: string;
+}
 
 const Tickets = () => {
   const [tickets, setTickets] = useState<any[]>([]);
-  const [filteredTickets, setFilteredTickets] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState({
-    searchTerm: '',
-    startDate: '',
-    endDate: '',
-    userName: '',
-    ticketNumber: '',
-    lotteryName: '',
-    controlNumber: '',
-  });
 
-  // Modal de anulación
+  // Estados de modal
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [showNumbers, setShowNumbers] = useState(false);
+
+  // Estados de cancelación
   const [cancelData, setCancelData] = useState({
     refundType: 'full' as 'full' | 'partial' | 'none',
     refundPercentage: 100,
     reason: '',
+    makeAvailable: false,
   });
+
+  // Estados de paginación y filtros
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadTickets();
   }, []);
 
   useEffect(() => {
-    filterTickets();
-  }, [tickets, filters]);
+    filterPurchases();
+  }, [purchases, searchTerm, currentPage, itemsPerPage]);
+
+  const filterPurchases = () => {
+    let filtered = [...purchases];
+
+    // Aplicar búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.userName.toLowerCase().includes(term) ||
+          p.userEmail.toLowerCase().includes(term) ||
+          p.userUsername?.toLowerCase().includes(term) ||
+          p.lotteryName.toLowerCase().includes(term) ||
+          p.lotteryControlNumber.toLowerCase().includes(term) ||
+          format(p.purchaseDate, 'PP', { locale: es }).toLowerCase().includes(term)
+      );
+    }
+
+    setFilteredPurchases(filtered);
+    // Reset a primera página si cambia la búsqueda
+    if (searchTerm) setCurrentPage(1);
+  };
 
   const loadTickets = async () => {
     try {
       setLoading(true);
       setError(null);
       console.log('Cargando tickets desde el endpoint admin...');
-      // Usar el nuevo endpoint que obtiene TODOS los tickets
       const response = await ticketAPI.getAllTicketsAdmin({ limit: 10000 });
       console.log('Respuesta del servidor:', response.data);
-      setTickets(response.data.tickets || []);
-      toast.success(`${response.data.tickets?.length || 0} boletos cargados`);
+      const ticketsData = response.data.tickets || [];
+      setTickets(ticketsData);
+
+      // Agrupar boletos por compra
+      const purchasesMap = new Map<string, Purchase>();
+
+      ticketsData.forEach((ticket: any) => {
+        // Crear key única para cada compra: userId + lotteryId + purchaseDate (redondeado a segundo)
+        const purchaseDate = new Date(ticket.purchaseDate);
+        purchaseDate.setMilliseconds(0);
+        const purchaseKey = `${ticket.userId._id}_${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
+
+        if (purchasesMap.has(purchaseKey)) {
+          const purchase = purchasesMap.get(purchaseKey)!;
+          purchase.tickets.push(ticket);
+          purchase.quantity += 1;
+          purchase.totalAmount += ticket.price;
+        } else {
+          purchasesMap.set(purchaseKey, {
+            userId: ticket.userId._id,
+            userName: `${ticket.userId.firstName} ${ticket.userId.lastName}`,
+            userEmail: ticket.userId.email,
+            userUsername: ticket.userId.username,
+            lotteryId: ticket.lotteryId._id,
+            lotteryName: ticket.lotteryId.name,
+            lotteryControlNumber: ticket.lotteryId.controlNumber,
+            ticketPrice: ticket.price,
+            purchaseDate: purchaseDate,
+            tickets: [ticket],
+            totalAmount: ticket.price,
+            quantity: 1,
+            status: ticket.status,
+          });
+        }
+      });
+
+      // Actualizar el estado de cada compra basándose en todos sus tickets
+      purchasesMap.forEach((purchase) => {
+        const hasWinner = purchase.tickets.some((t: any) => t.status === 'won');
+        const hasCancelled = purchase.tickets.some((t: any) => t.status === 'cancelled');
+        const allLost = purchase.tickets.every((t: any) => t.status === 'lost');
+        const allActive = purchase.tickets.every((t: any) => t.status === 'active');
+        const allCancelled = purchase.tickets.every((t: any) => t.status === 'cancelled');
+
+        if (allCancelled) {
+          purchase.status = 'cancelled';
+        } else if (hasWinner) {
+          purchase.status = 'won';
+        } else if (allLost) {
+          purchase.status = 'lost';
+        } else if (allActive) {
+          purchase.status = 'active';
+        } else {
+          // Estado mixto
+          purchase.status = hasCancelled ? 'mixed-cancelled' : 'active';
+        }
+      });
+
+      setPurchases(
+        Array.from(purchasesMap.values()).sort(
+          (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime()
+        )
+      );
+
+      toast.success(`${purchasesMap.size} compras cargadas (${ticketsData.length} boletos)`);
     } catch (error: any) {
       console.error('Error al cargar boletos:', error);
-      console.error('Detalles del error:', error.response?.data);
       const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar boletos';
       setError(errorMessage);
       toast.error('Error al cargar boletos. Revisa la consola para más detalles.');
-      setTickets([]); // Asegurar que se muestre la tabla vacía en caso de error
+      setTickets([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterTickets = () => {
-    let filtered = [...tickets];
-
-    // Search term (general search across multiple fields)
-    if (filters.searchTerm) {
-      const term = filters.searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (ticket) =>
-          ticket.ticketNumber?.toLowerCase().includes(term) ||
-          ticket.userId?.firstName?.toLowerCase().includes(term) ||
-          ticket.userId?.lastName?.toLowerCase().includes(term) ||
-          ticket.userId?.email?.toLowerCase().includes(term) ||
-          ticket.lotteryId?.name?.toLowerCase().includes(term) ||
-          ticket.lotteryId?.controlNumber?.toLowerCase().includes(term)
-      );
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'won':
+        return 'bg-green-100 text-green-800';
+      case 'lost':
+        return 'bg-red-100 text-red-800';
+      case 'active':
+        return 'bg-blue-100 text-blue-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
+      case 'mixed-cancelled':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-
-    // Date range
-    if (filters.startDate) {
-      filtered = filtered.filter(
-        (ticket) =>
-          new Date(ticket.purchaseDate) >= new Date(filters.startDate)
-      );
-    }
-    if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
-      endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(
-        (ticket) => new Date(ticket.purchaseDate) <= endDate
-      );
-    }
-
-    // User name
-    if (filters.userName) {
-      const term = filters.userName.toLowerCase();
-      filtered = filtered.filter(
-        (ticket) =>
-          ticket.userId?.firstName?.toLowerCase().includes(term) ||
-          ticket.userId?.lastName?.toLowerCase().includes(term) ||
-          ticket.userId?.email?.toLowerCase().includes(term)
-      );
-    }
-
-    // Ticket number
-    if (filters.ticketNumber) {
-      const term = filters.ticketNumber.toLowerCase();
-      filtered = filtered.filter((ticket) =>
-        ticket.ticketNumber?.toLowerCase().includes(term)
-      );
-    }
-
-    // Lottery name
-    if (filters.lotteryName) {
-      const term = filters.lotteryName.toLowerCase();
-      filtered = filtered.filter((ticket) =>
-        ticket.lotteryId?.name?.toLowerCase().includes(term)
-      );
-    }
-
-    // Control number
-    if (filters.controlNumber) {
-      const term = filters.controlNumber.toLowerCase();
-      filtered = filtered.filter((ticket) =>
-        ticket.lotteryId?.controlNumber?.toLowerCase().includes(term)
-      );
-    }
-
-    setFilteredTickets(filtered);
   };
 
-  const handleFilterChange = (field: string, value: string) => {
-    setFilters({
-      ...filters,
-      [field]: value,
-    });
+  const getStatusText = (status: string) => {
+    const statusMap: any = {
+      won: 'Ganador',
+      lost: 'Perdedor',
+      active: 'Activo',
+      cancelled: 'Anulado',
+      'mixed-cancelled': 'Parcialmente Anulado',
+    };
+    return statusMap[status] || status;
   };
 
-  const clearFilters = () => {
-    setFilters({
-      searchTerm: '',
-      startDate: '',
-      endDate: '',
-      userName: '',
-      ticketNumber: '',
-      lotteryName: '',
-      controlNumber: '',
-    });
+  const getTicketStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+      case 'pending':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Activo</span>;
+      case 'won':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ganador</span>;
+      case 'lost':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Perdedor</span>;
+      case 'cancelled':
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Anulado</span>;
+      default:
+        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+    }
+  };
+
+  const openPurchaseModal = (purchase: Purchase) => {
+    setSelectedPurchase(purchase);
+    setShowNumbers(false);
+    setShowPurchaseModal(true);
+  };
+
+  const closePurchaseModal = () => {
+    setShowPurchaseModal(false);
+    setSelectedPurchase(null);
+    setShowNumbers(false);
   };
 
   const openCancelModal = (ticket: any) => {
@@ -153,6 +224,7 @@ const Tickets = () => {
       refundType: 'full',
       refundPercentage: 100,
       reason: '',
+      makeAvailable: false,
     });
     setShowCancelModal(true);
   };
@@ -185,87 +257,18 @@ const Tickets = () => {
 
       toast.success('Boleto anulado exitosamente');
       closeCancelModal();
+      closePurchaseModal();
       loadTickets();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Error al anular boleto');
     }
   };
 
-  const handleExport = () => {
-    // Basic CSV export
-    const csvContent = [
-      [
-        'Número de Boleto',
-        'Usuario',
-        'Email',
-        'Sorteo',
-        'Número de Control',
-        'Números',
-        'Fecha de Compra',
-        'Monto',
-        'Estado',
-      ],
-      ...filteredTickets.map((ticket) => [
-        ticket.ticketNumber || 'N/A',
-        `${ticket.userId?.firstName || ''} ${ticket.userId?.lastName || ''}`,
-        ticket.userId?.email || 'N/A',
-        ticket.lotteryId?.name || 'N/A',
-        ticket.lotteryId?.controlNumber || 'N/A',
-        ticket.numbers?.join(', ') || 'N/A',
-        new Date(ticket.purchaseDate).toLocaleString(),
-        `$${ticket.price}`,
-        ticket.status || 'active',
-      ]),
-    ]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `tickets_${new Date().toISOString()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success('Exportación completada');
-  };
-
-  const calculateStats = () => {
-    const totalTickets = filteredTickets.length;
-    const totalAmount = filteredTickets.reduce(
-      (sum, ticket) => sum + (ticket.price || 0),
-      0
-    );
-    const uniqueUsers = new Set(
-      filteredTickets.map((ticket) => ticket.userId?._id)
-    ).size;
-    const uniqueLotteries = new Set(
-      filteredTickets.map((ticket) => ticket.lotteryId?._id)
-    ).size;
-
-    return { totalTickets, totalAmount, uniqueUsers, uniqueLotteries };
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-      case 'pending':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Activo</span>;
-      case 'won':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Ganador</span>;
-      case 'lost':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Perdedor</span>;
-      case 'cancelled':
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Anulado</span>;
-      default:
-        return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
-    }
-  };
-
-  const stats = calculateStats();
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPurchases = filteredPurchases.slice(startIndex, endIndex);
 
   if (loading) {
     return (
@@ -300,97 +303,21 @@ const Tickets = () => {
             </div>
           </div>
         )}
+
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Gestión de Ventas de Boletos
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Administra y filtra todas las ventas de boletos
-            </p>
-          </div>
-          <button
-            onClick={handleExport}
-            className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
-          >
-            <Download size={20} />
-            <span>Exportar CSV</span>
-          </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Ventas de Boletos</h1>
+          <p className="text-gray-600 mt-1">
+            Historial completo de compras ({filteredPurchases.length} compra{filteredPurchases.length !== 1 ? 's' : ''})
+          </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Boletos</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats.totalTickets}
-                </p>
-              </div>
-              <Ticket className="text-primary-600" size={32} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Ingresos Totales</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  ${stats.totalAmount.toFixed(2)}
-                </p>
-              </div>
-              <FileText className="text-green-600" size={32} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Usuarios Únicos</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats.uniqueUsers}
-                </p>
-              </div>
-              <User className="text-blue-600" size={32} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Sorteos Activos</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats.uniqueLotteries}
-                </p>
-              </div>
-              <Calendar className="text-yellow-600" size={32} />
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
+        {/* Filtros y búsqueda */}
         <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
-              <Filter size={20} />
-              <span>Filtros</span>
-            </h2>
-            <button
-              onClick={clearFilters}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Limpiar filtros
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* General Search */}
-            <div className="md:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Búsqueda General
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Búsqueda */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
               <div className="relative">
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -398,236 +325,305 @@ const Tickets = () => {
                 />
                 <input
                   type="text"
-                  placeholder="Buscar por usuario, boleto, sorteo..."
-                  value={filters.searchTerm}
-                  onChange={(e) =>
-                    handleFilterChange('searchTerm', e.target.value)
-                  }
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Buscar por usuario, sorteo, control o fecha..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
             </div>
 
-            {/* Date Range */}
+            {/* Items por página */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha Inicial
-              </label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) =>
-                  handleFilterChange('startDate', e.target.value)
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha Final
-              </label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre de Usuario
-              </label>
-              <input
-                type="text"
-                placeholder="Juan Pérez"
-                value={filters.userName}
-                onChange={(e) => handleFilterChange('userName', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Boleto
-              </label>
-              <input
-                type="text"
-                placeholder="TKT-123"
-                value={filters.ticketNumber}
-                onChange={(e) =>
-                  handleFilterChange('ticketNumber', e.target.value)
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre del Sorteo
-              </label>
-              <input
-                type="text"
-                placeholder="Gran Sorteo"
-                value={filters.lotteryName}
-                onChange={(e) =>
-                  handleFilterChange('lotteryName', e.target.value)
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Control
-              </label>
-              <input
-                type="text"
-                placeholder="LOT-2024-001"
-                value={filters.controlNumber}
-                onChange={(e) =>
-                  handleFilterChange('controlNumber', e.target.value)
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mostrar por página</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             </div>
           </div>
         </div>
 
-        {/* Results Count */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Mostrando {filteredTickets.length} de {tickets.length} boletos
-          </p>
-        </div>
+        {/* Compras */}
+        {currentPurchases.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 gap-4">
+              {currentPurchases.map((purchase, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Package className="text-primary-600" size={20} />
+                        <h3 className="text-lg font-bold text-gray-900">{purchase.lotteryName}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Control: {purchase.lotteryControlNumber}</p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <User className="text-gray-400" size={16} />
+                        <p className="text-sm text-gray-700">
+                          <span className="font-semibold">{purchase.userName}</span>
+                          {purchase.userUsername && <span className="text-gray-500"> (@{purchase.userUsername})</span>}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500 ml-6">{purchase.userEmail}</p>
+                    </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+                        purchase.status
+                      )}`}
+                    >
+                      {getStatusText(purchase.status)}
+                    </span>
+                  </div>
 
-        {/* Tickets Table */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Boleto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Usuario
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Sorteo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Números
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Monto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredTickets.map((ticket) => (
-                  <tr key={ticket._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {ticket.ticketNumber || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Ticket className="text-gray-400" size={18} />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {ticket.userId?.firstName} {ticket.userId?.lastName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {ticket.userId?.email}
-                        </div>
+                        <p className="text-xs text-gray-600">Precio Unitario</p>
+                        <p className="font-semibold text-gray-900">${purchase.ticketPrice.toFixed(2)}</p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {ticket.lotteryId?.name || 'N/A'}
-                        </div>
-                        {ticket.lotteryId?.controlNumber && (
-                          <div className="text-sm text-gray-500">
-                            {ticket.lotteryId.controlNumber}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {ticket.numbers && ticket.numbers.length > 0 ? (
-                          ticket.numbers.map((num: number, idx: number) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-semibold rounded"
-                            >
-                              {num}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-gray-500">
-                            Aleatorio
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(ticket.purchaseDate).toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(ticket.purchaseDate).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-green-600">
-                        ${ticket.price?.toFixed(2)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(ticket.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {ticket.status !== 'cancelled' && ticket.status !== 'won' && (
-                        <button
-                          onClick={() => openCancelModal(ticket)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Anular boleto"
-                        >
-                          <XCircle size={20} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
 
-            {filteredTickets.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  No se encontraron boletos
-                </p>
+                    <div className="flex items-center space-x-2">
+                      <Hash className="text-gray-400" size={18} />
+                      <div>
+                        <p className="text-xs text-gray-600">Cantidad</p>
+                        <p className="font-semibold text-gray-900">{purchase.quantity} boletos</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="text-green-600" size={18} />
+                      <div>
+                        <p className="text-xs text-gray-600">Monto Total</p>
+                        <p className="font-semibold text-green-600">${purchase.totalAmount.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="text-gray-400" size={18} />
+                      <div>
+                        <p className="text-xs text-gray-600">Fecha</p>
+                        <p className="font-semibold text-gray-900 text-sm">
+                          {format(purchase.purchaseDate, 'PP', { locale: es })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => openPurchaseModal(purchase)}
+                    className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                  >
+                    <Eye size={18} />
+                    <span>Ver Detalle de Compra</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between bg-white rounded-xl shadow-md p-4">
+                <div className="text-sm text-gray-600">
+                  Mostrando {startIndex + 1} - {Math.min(endIndex, filteredPurchases.length)} de{' '}
+                  {filteredPurchases.length}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
               </div>
             )}
+          </>
+        ) : (
+          <div className="bg-white rounded-xl shadow-md p-12 text-center">
+            <Package className="mx-auto text-gray-400 mb-4" size={64} />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No se encontraron compras</h3>
+            <p className="text-gray-600">
+              {searchTerm ? 'Intenta con otro término de búsqueda' : 'Aún no hay compras registradas'}
+            </p>
           </div>
-        </div>
+        )}
+
+        {/* Modal Detalle de Compra */}
+        {showPurchaseModal && selectedPurchase && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">Detalle de Compra</h2>
+                  <p className="text-sm text-gray-600">{selectedPurchase.lotteryName}</p>
+                </div>
+                <button
+                  onClick={closePurchaseModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Status Badge */}
+              <div className="mb-6">
+                <span
+                  className={`inline-flex px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(
+                    selectedPurchase.status
+                  )}`}
+                >
+                  Estado: {getStatusText(selectedPurchase.status)}
+                </span>
+              </div>
+
+              {/* Purchase Information */}
+              <div className="bg-gray-50 rounded-xl p-6 mb-6">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
+                  Información de la Compra
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start space-x-3">
+                    <User className="text-primary-600 mt-1" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-600">Usuario</p>
+                      <p className="font-semibold text-gray-900">{selectedPurchase.userName}</p>
+                      {selectedPurchase.userUsername && (
+                        <p className="text-xs text-gray-500">@{selectedPurchase.userUsername}</p>
+                      )}
+                      <p className="text-xs text-gray-500">{selectedPurchase.userEmail}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="text-gray-400 mt-1" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-600">Fecha de Compra</p>
+                      <p className="font-semibold text-gray-900">
+                        {format(selectedPurchase.purchaseDate, 'PPP', { locale: es })}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {format(selectedPurchase.purchaseDate, 'p', { locale: es })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Ticket className="text-gray-400 mt-1" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-600">Precio por Boleto</p>
+                      <p className="font-semibold text-gray-900">${selectedPurchase.ticketPrice.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Hash className="text-gray-400 mt-1" size={20} />
+                    <div>
+                      <p className="text-sm text-gray-600">Cantidad de Boletos</p>
+                      <p className="font-semibold text-gray-900">{selectedPurchase.quantity} boletos</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Amount */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="text-green-600" size={24} />
+                      <span className="text-lg font-semibold text-gray-900">Monto Total:</span>
+                    </div>
+                    <span className="text-2xl font-bold text-green-600">
+                      ${selectedPurchase.totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Numbers Board */}
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-gray-900 flex items-center">
+                    <Hash className="mr-2" size={20} />
+                    Boletos Comprados ({selectedPurchase.tickets.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowNumbers(!showNumbers)}
+                    className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
+                  >
+                    {showNumbers ? 'Ocultar' : 'Mostrar'} Boletos
+                  </button>
+                </div>
+
+                {showNumbers && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                      {selectedPurchase.tickets.map((ticket, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-primary-400 transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="font-mono text-lg font-bold text-primary-600">
+                                  {ticket.numbers[0].toString().padStart(4, '0')}
+                                </div>
+                                <div>{getTicketStatusBadge(ticket.status)}</div>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Número de Boleto: {ticket.ticketNumber}
+                              </p>
+                            </div>
+                            {ticket.status !== 'cancelled' && ticket.status !== 'won' && (
+                              <button
+                                onClick={() => openCancelModal(ticket)}
+                                className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Anular boleto"
+                              >
+                                <XCircle size={18} />
+                                <span className="text-sm font-medium">Anular</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Anular Boleto */}
         {showCancelModal && selectedTicket && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Anular Boleto</h2>
                 <button onClick={closeCancelModal} className="text-gray-500 hover:text-gray-700">
@@ -636,25 +632,27 @@ const Tickets = () => {
               </div>
 
               <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Boleto: <span className="font-semibold">{selectedTicket.ticketNumber}</span></p>
-                <p className="text-sm text-gray-600">Usuario: <span className="font-semibold">{selectedTicket.userId?.firstName} {selectedTicket.userId?.lastName}</span></p>
-                <p className="text-sm text-gray-600">Sorteo: <span className="font-semibold">{selectedTicket.lotteryId?.name}</span></p>
-                <p className="text-sm text-gray-600">Monto: <span className="font-semibold text-green-600">${selectedTicket.price?.toFixed(2)}</span></p>
+                <p className="text-sm text-gray-600">
+                  Número: <span className="font-mono font-bold text-lg text-primary-600">{selectedTicket.numbers[0]}</span>
+                </p>
+                <p className="text-sm text-gray-600">
+                  Boleto: <span className="font-semibold">{selectedTicket.ticketNumber}</span>
+                </p>
+                <p className="text-sm text-gray-600">
+                  Monto: <span className="font-semibold text-green-600">${selectedTicket.price?.toFixed(2)}</span>
+                </p>
               </div>
 
               <form onSubmit={handleCancelTicket} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de Reintegro*
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Reintegro*</label>
                   <div className="space-y-2">
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        name="refundType"
                         value="full"
                         checked={cancelData.refundType === 'full'}
-                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'full', refundPercentage: 100 })}
+                        onChange={() => setCancelData({ ...cancelData, refundType: 'full', refundPercentage: 100 })}
                         className="mr-2"
                       />
                       <span className="text-sm">Reintegro Total (100%)</span>
@@ -662,10 +660,9 @@ const Tickets = () => {
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        name="refundType"
                         value="partial"
                         checked={cancelData.refundType === 'partial'}
-                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'partial' })}
+                        onChange={() => setCancelData({ ...cancelData, refundType: 'partial' })}
                         className="mr-2"
                       />
                       <span className="text-sm">Reintegro Parcial (%)</span>
@@ -673,10 +670,9 @@ const Tickets = () => {
                     <label className="flex items-center">
                       <input
                         type="radio"
-                        name="refundType"
                         value="none"
                         checked={cancelData.refundType === 'none'}
-                        onChange={(e) => setCancelData({ ...cancelData, refundType: 'none', refundPercentage: 0 })}
+                        onChange={() => setCancelData({ ...cancelData, refundType: 'none', refundPercentage: 0 })}
                         className="mr-2"
                       />
                       <span className="text-sm">Sin Reintegro</span>
@@ -695,7 +691,9 @@ const Tickets = () => {
                       max="100"
                       required
                       value={cancelData.refundPercentage}
-                      onChange={(e) => setCancelData({ ...cancelData, refundPercentage: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setCancelData({ ...cancelData, refundPercentage: Number(e.target.value) })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     />
                     <p className="text-sm text-gray-500 mt-1">
@@ -718,13 +716,18 @@ const Tickets = () => {
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ Esta acción es irreversible. El boleto quedará marcado como "Anulado" y {
-                      cancelData.refundType === 'full' ? 'se reintegrará el 100% del monto' :
-                      cancelData.refundType === 'partial' ? `se reintegrará el ${cancelData.refundPercentage}% del monto` :
-                      'NO se reintegrará ningún monto'
-                    } al usuario.
-                  </p>
+                  <div className="flex items-start space-x-2">
+                    <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+                    <p className="text-sm text-yellow-800">
+                      Esta acción es irreversible. El boleto quedará marcado como "Anulado" y{' '}
+                      {cancelData.refundType === 'full'
+                        ? 'se reintegrará el 100% del monto'
+                        : cancelData.refundType === 'partial'
+                        ? `se reintegrará el ${cancelData.refundPercentage}% del monto`
+                        : 'NO se reintegrará ningún monto'}{' '}
+                      al usuario.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">
