@@ -438,7 +438,7 @@ export const cancelTicket = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { refundType, refundPercentage, reason } = req.body;
+    const { refundType, refundPercentage, reason, makeAvailable } = req.body;
 
     // Validar tipo de reintegro
     if (!['full', 'partial', 'none'].includes(refundType)) {
@@ -475,6 +475,9 @@ export const cancelTicket = async (
 
     const user = ticket.userId as any;
     const lottery = ticket.lotteryId as any;
+    const ticketNumber = ticket.ticketNumber;
+    const ticketId = ticket._id;
+    const ticketNumbers = ticket.numbers;
 
     // Calcular el monto de reintegro
     let refundAmount = 0;
@@ -501,17 +504,23 @@ export const cancelTicket = async (
         status: 'completed',
         method: 'refund',
         transactionId: `REFUND-${uuidv4()}`,
-        description: `Reintegro por cancelación de boleto ${ticket.ticketNumber} - ${refundType === 'full' ? 'Total' : `${refundPercentage}%`}${reason ? ` - Motivo: ${reason}` : ''}`,
-        ticketId: ticket._id,
+        description: `Reintegro por cancelación de boleto ${ticketNumber} - ${refundType === 'full' ? 'Total' : `${refundPercentage}%`}${reason ? ` - Motivo: ${reason}` : ''}`,
+        ticketId: ticketId,
         lotteryId: lottery?._id,
         processedAt: new Date(),
-        metadata: { refundType, refundPercentage, originalPrice: ticket.price, reason }
+        metadata: { refundType, refundPercentage, originalPrice: ticket.price, reason, makeAvailable }
       });
     }
 
-    // Actualizar el boleto
-    ticket.status = 'cancelled';
-    await ticket.save();
+    // Decidir si eliminar el boleto (hacer número disponible) o solo cambiar estado
+    if (makeAvailable === true) {
+      // Eliminar el boleto completamente para que el número vuelva a estar disponible
+      await Ticket.findByIdAndDelete(id);
+    } else {
+      // Solo cambiar el estado a 'cancelled'
+      ticket.status = 'cancelled';
+      await ticket.save();
+    }
 
     // Actualizar contador de boletos vendidos de la lotería
     if (lottery) {
@@ -526,28 +535,37 @@ export const cancelTicket = async (
         ? `Se te ha reintegrado $${refundAmount.toFixed(2)} (${refundType === 'full' ? '100%' : `${refundPercentage}%`}) a tu saldo.`
         : 'No se realizó reintegro.';
 
+      const availabilityText = makeAvailable
+        ? ' El número del boleto está nuevamente disponible para compra.'
+        : ' El número del boleto ha quedado anulado.';
+
       await createNotification(
         String(user._id),
         'profile_updated',
         'Boleto cancelado ❌',
-        `Tu boleto ${ticket.ticketNumber} para el sorteo "${lottery?.name || 'N/A'}" ha sido cancelado por el administrador. ${refundText}${reason ? ` Motivo: ${reason}` : ''}`,
-        String(ticket._id),
+        `Tu boleto ${ticketNumber} para el sorteo "${lottery?.name || 'N/A'}" ha sido cancelado por el administrador. ${refundText}${availabilityText}${reason ? ` Motivo: ${reason}` : ''}`,
+        String(ticketId),
         {
-          ticketNumber: ticket.ticketNumber,
+          ticketNumber: ticketNumber,
           lotteryName: lottery?.name,
           refundType,
           refundAmount,
           originalPrice: ticket.price,
-          reason
+          reason,
+          makeAvailable
         }
       );
     }
 
     res.json({
-      message: 'Boleto cancelado exitosamente',
-      ticket,
+      message: makeAvailable
+        ? 'Boleto cancelado exitosamente. El número está nuevamente disponible.'
+        : 'Boleto cancelado exitosamente. El número queda anulado.',
+      ticketNumber,
+      ticketNumbers,
       refundAmount,
-      refundType
+      refundType,
+      makeAvailable
     });
   } catch (error) {
     console.error('Error al cancelar boleto:', error);

@@ -244,18 +244,27 @@ const Tickets = () => {
       return;
     }
 
-    if (!confirm(`¿Estás seguro de anular este boleto? Esta acción no se puede deshacer.`)) {
+    const confirmMessage = cancelData.makeAvailable
+      ? `¿Estás seguro de anular este boleto? El número ${selectedTicket.numbers[0]} volverá a estar DISPONIBLE para compra. Esta acción no se puede deshacer.`
+      : `¿Estás seguro de anular este boleto? El número ${selectedTicket.numbers[0]} quedará ANULADO permanentemente. Esta acción no se puede deshacer.`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
-      await ticketAPI.cancel(selectedTicket._id, {
+      const response = await ticketAPI.cancel(selectedTicket._id, {
         refundType: cancelData.refundType,
         refundPercentage: cancelData.refundType === 'partial' ? cancelData.refundPercentage : undefined,
         reason: cancelData.reason || undefined,
+        makeAvailable: cancelData.makeAvailable,
       });
 
-      toast.success('Boleto anulado exitosamente');
+      const successMessage = cancelData.makeAvailable
+        ? `Boleto anulado. El número ${selectedTicket.numbers[0]} está nuevamente disponible.`
+        : 'Boleto anulado exitosamente';
+
+      toast.success(successMessage);
       closeCancelModal();
       closePurchaseModal();
       loadTickets();
@@ -715,17 +724,43 @@ const Tickets = () => {
                   />
                 </div>
 
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <label className="flex items-start cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={cancelData.makeAvailable}
+                      onChange={(e) => setCancelData({ ...cancelData, makeAvailable: e.target.checked })}
+                      className="mt-1 h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    />
+                    <div className="ml-3">
+                      <span className="text-sm font-medium text-blue-900">
+                        Hacer el número disponible nuevamente
+                      </span>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {cancelData.makeAvailable
+                          ? `Al marcar esta opción, el número ${selectedTicket.numbers[0]} se ELIMINARÁ completamente y volverá a estar disponible para que otros usuarios lo compren.`
+                          : `Si no marcas esta opción, el número ${selectedTicket.numbers[0]} quedará ANULADO permanentemente y no podrá ser comprado por nadie más.`
+                        }
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <div className="flex items-start space-x-2">
                     <AlertTriangle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
                     <p className="text-sm text-yellow-800">
-                      Esta acción es irreversible. El boleto quedará marcado como "Anulado" y{' '}
+                      Esta acción es irreversible. {' '}
                       {cancelData.refundType === 'full'
-                        ? 'se reintegrará el 100% del monto'
+                        ? 'Se reintegrará el 100% del monto'
                         : cancelData.refundType === 'partial'
-                        ? `se reintegrará el ${cancelData.refundPercentage}% del monto`
+                        ? `Se reintegrará el ${cancelData.refundPercentage}% del monto`
                         : 'NO se reintegrará ningún monto'}{' '}
                       al usuario.
+                      {cancelData.makeAvailable
+                        ? ` El número ${selectedTicket.numbers[0]} volverá a estar disponible.`
+                        : ` El número ${selectedTicket.numbers[0]} quedará anulado.`
+                      }
                     </p>
                   </div>
                 </div>
