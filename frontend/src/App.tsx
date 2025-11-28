@@ -13,6 +13,7 @@ import AdminTickets from './pages/admin/Tickets';
 import AdminPayments from './pages/admin/Payments';
 import EmailTemplates from './pages/admin/EmailTemplates';
 import Settings from './pages/admin/Settings';
+import AdminRankings from './pages/admin/Rankings';
 import Lotteries from './pages/Lotteries';
 import PublicLotteries from './pages/PublicLotteries';
 import LotteryDetail from './pages/LotteryDetail';
@@ -143,7 +144,7 @@ function App() {
             path="/admin/rankings"
             element={
               <PrivateRoute adminOnly>
-                <Rankings />
+                <AdminRankings />
               </PrivateRoute>
             }
           />

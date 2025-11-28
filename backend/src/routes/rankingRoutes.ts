@@ -8,57 +8,56 @@ import {
   getMonthlyRanking,
   getYearlyRanking,
 } from '../controllers/rankingController';
-import { authenticate } from '../middlewares/auth';
 
 const router = Router();
 
 /**
  * @route   GET /api/rankings/top-buyers
  * @desc    Obtiene el ranking de jugadores que más boletos han comprado
- * @access  Private
+ * @access  Public
  */
-router.get('/top-buyers', authenticate, getTopBuyers);
+router.get('/top-buyers', getTopBuyers);
 
 /**
  * @route   GET /api/rankings/top-winners
  * @desc    Obtiene el ranking de jugadores que más han ganado
- * @access  Private
+ * @access  Public
  */
-router.get('/top-winners', authenticate, getTopWinners);
+router.get('/top-winners', getTopWinners);
 
 /**
  * @route   GET /api/rankings/top-spenders
  * @desc    Obtiene el ranking de jugadores que más han gastado
- * @access  Private
+ * @access  Public
  */
-router.get('/top-spenders', authenticate, getTopSpenders);
+router.get('/top-spenders', getTopSpenders);
 
 /**
  * @route   GET /api/rankings/stats
  * @desc    Obtiene estadísticas generales de rankings
- * @access  Private
+ * @access  Public
  */
-router.get('/stats', authenticate, getRankingStats);
+router.get('/stats', getRankingStats);
 
 /**
  * @route   GET /api/rankings/lottery/:lotteryId
  * @desc    Obtiene el ranking de jugadores por sorteo
- * @access  Private
+ * @access  Public
  */
-router.get('/lottery/:lotteryId', authenticate, getRankingByLottery);
+router.get('/lottery/:lotteryId', getRankingByLottery);
 
 /**
  * @route   GET /api/rankings/monthly
  * @desc    Obtiene el ranking mensual
- * @access  Private
+ * @access  Public
  */
-router.get('/monthly', authenticate, getMonthlyRanking);
+router.get('/monthly', getMonthlyRanking);
 
 /**
  * @route   GET /api/rankings/yearly
  * @desc    Obtiene el ranking anual
- * @access  Private
+ * @access  Public
  */
-router.get('/yearly', authenticate, getYearlyRanking);
+router.get('/yearly', getYearlyRanking);
 
 export default router;
