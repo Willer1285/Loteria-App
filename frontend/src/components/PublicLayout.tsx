@@ -43,7 +43,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
                 <span>Resultados</span>
               </Link>
               <Link
-                to="/rankings"
+                to="/public-rankings"
                 className="flex items-center space-x-1 text-gray-700 hover:text-primary-600 font-medium transition-colors"
               >
                 <BarChart2 size={18} />
@@ -106,7 +106,7 @@ const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
                   <span>Resultados</span>
                 </Link>
                 <Link
-                  to="/rankings"
+                  to="/public-rankings"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors py-2"
                 >

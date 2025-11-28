@@ -140,6 +140,15 @@ function App() {
           />
 
           <Route
+            path="/admin/rankings"
+            element={
+              <PrivateRoute adminOnly>
+                <Rankings />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
             path="/lotteries"
             element={
               <PrivateRoute>
