@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { rankingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Trophy, ShoppingBag, TrendingUp, Eye, X, User, Mail, Hash, Calendar, DollarSign } from 'lucide-react';
+import { Trophy, Eye, X, User, Mail, Hash, Phone, MapPin, Ticket, Wallet } from 'lucide-react';
 
 const AdminRankings = () => {
   const [activeTab, setActiveTab] = useState<'buyers' | 'winners' | 'spenders'>('buyers');
@@ -75,11 +75,11 @@ const AdminRankings = () => {
   const getCategoryIcon = () => {
     switch (activeTab) {
       case 'buyers':
-        return ShoppingBag;
+        return Ticket;
       case 'winners':
         return Trophy;
       case 'spenders':
-        return TrendingUp;
+        return Wallet;
     }
   };
 
@@ -103,7 +103,7 @@ const AdminRankings = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <ShoppingBag size={20} />
+            <Ticket size={20} />
             <span>Ticket Master</span>
           </button>
 
@@ -127,7 +127,7 @@ const AdminRankings = () => {
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <TrendingUp size={20} />
+            <Wallet size={20} />
             <span>Tiburón</span>
           </button>
         </div>
@@ -277,7 +277,7 @@ const AdminRankings = () => {
                   <div>
                     <p className="text-xs text-gray-600 font-medium">Nombre Completo</p>
                     <p className="font-semibold text-gray-900">
-                      {selectedUser.user.firstName} {selectedUser.user.lastName}
+                      {selectedUser.user.firstName || 'N/A'} {selectedUser.user.lastName || ''}
                     </p>
                   </div>
                 </div>
@@ -295,35 +295,25 @@ const AdminRankings = () => {
                   <div>
                     <p className="text-xs text-gray-600 font-medium">Email</p>
                     <p className="font-semibold text-gray-900 text-sm break-all">
-                      {selectedUser.user.email}
+                      {selectedUser.user.email || 'N/A'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <DollarSign className="text-green-600 mt-0.5" size={20} />
+                  <Phone className="text-primary-600 mt-0.5" size={20} />
                   <div>
-                    <p className="text-xs text-gray-600 font-medium">Saldo Actual</p>
-                    <p className="font-semibold text-green-600">
-                      ${selectedUser.user.balance?.toFixed(2) || '0.00'}
+                    <p className="text-xs text-gray-600 font-medium">Teléfono</p>
+                    <p className="font-semibold text-gray-900">
+                      {selectedUser.user.phone || 'N/A'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {selectedUser.user.phone && (
-                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Hash className="text-primary-600 mt-0.5" size={20} />
-                  <div>
-                    <p className="text-xs text-gray-600 font-medium">Teléfono</p>
-                    <p className="font-semibold text-gray-900">{selectedUser.user.phone}</p>
-                  </div>
-                </div>
-              )}
-
               {selectedUser.user.address && (
                 <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                  <Calendar className="text-primary-600 mt-0.5" size={20} />
+                  <MapPin className="text-primary-600 mt-0.5" size={20} />
                   <div>
                     <p className="text-xs text-gray-600 font-medium">Dirección</p>
                     <p className="font-semibold text-gray-900">{selectedUser.user.address}</p>

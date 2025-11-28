@@ -17,7 +17,7 @@ export const getTopBuyers = async (
     const topBuyers = await User.find({ role: 'jugador' })
       .sort({ ticketsPurchased: -1 })
       .limit(Number(limit))
-      .select('username ticketsPurchased totalSpent');
+      .select('username firstName lastName email phone address ticketsPurchased totalSpent');
 
     res.json({
       ranking: topBuyers.map((user, index) => ({
@@ -25,6 +25,11 @@ export const getTopBuyers = async (
         user: {
           id: user._id,
           username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
         },
         ticketsPurchased: user.ticketsPurchased,
         totalSpent: user.totalSpent,
@@ -48,7 +53,7 @@ export const getTopWinners = async (
     const topWinners = await User.find({ role: 'jugador', totalWon: { $gt: 0 } })
       .sort({ totalWon: -1 })
       .limit(Number(limit))
-      .select('username totalWon ticketsPurchased');
+      .select('username firstName lastName email phone address totalWon ticketsPurchased');
 
     res.json({
       ranking: topWinners.map((user, index) => ({
@@ -56,6 +61,11 @@ export const getTopWinners = async (
         user: {
           id: user._id,
           username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
         },
         totalWon: user.totalWon,
         ticketsPurchased: user.ticketsPurchased,
@@ -79,7 +89,7 @@ export const getTopSpenders = async (
     const topSpenders = await User.find({ role: 'jugador' })
       .sort({ totalSpent: -1 })
       .limit(Number(limit))
-      .select('username totalSpent totalWon ticketsPurchased');
+      .select('username firstName lastName email phone address totalSpent totalWon ticketsPurchased');
 
     res.json({
       ranking: topSpenders.map((user, index) => ({
@@ -87,6 +97,11 @@ export const getTopSpenders = async (
         user: {
           id: user._id,
           username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          address: user.address,
         },
         totalSpent: user.totalSpent,
         totalWon: user.totalWon,

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import PublicLayout from '../components/PublicLayout';
 import { rankingAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Trophy, TrendingUp, Zap, Award, ShoppingBag } from 'lucide-react';
+import { Trophy, Award, Ticket, Wallet } from 'lucide-react';
 
 const PublicRankings = () => {
   const [topBuyers, setTopBuyers] = useState<any[]>([]);
@@ -93,7 +93,7 @@ const PublicRankings = () => {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <ShoppingBag size={20} />
+            <Ticket size={20} />
             <span>Ticket Master</span>
           </button>
           <button
@@ -115,7 +115,7 @@ const PublicRankings = () => {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <TrendingUp size={20} />
+            <Wallet size={20} />
             <span>Tiburón</span>
           </button>
         </div>
