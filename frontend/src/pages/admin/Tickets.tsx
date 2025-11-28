@@ -335,7 +335,7 @@ const Tickets = () => {
                         <User className="text-gray-400" size={16} />
                         <p className="text-sm text-gray-700">
                           <span className="font-semibold">{purchase.userName}</span>
-                          {purchase.userUsername && <span className="text-gray-500"> (@{purchase.userUsername})</span>}
+                          {purchase.userUsername && <span className="text-gray-500"> ({purchase.userUsername})</span>}
                         </p>
                       </div>
                       <p className="text-xs text-gray-500 ml-6">{purchase.userEmail}</p>
@@ -434,9 +434,11 @@ const Tickets = () => {
             </p>
           </div>
         )}
+      </div>
 
-        {/* Modal Detalle de Compra */}
-        {showPurchaseModal && selectedPurchase && (
+      {/* Modales fuera del contenedor space-y-6 para evitar margen superior */}
+      {/* Modal Detalle de Compra */}
+      {showPurchaseModal && selectedPurchase && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 m-4 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
@@ -476,7 +478,7 @@ const Tickets = () => {
                       <p className="text-sm text-gray-600">Usuario</p>
                       <p className="font-semibold text-gray-900">{selectedPurchase.userName}</p>
                       {selectedPurchase.userUsername && (
-                        <p className="text-xs text-gray-500">@{selectedPurchase.userUsername}</p>
+                        <p className="text-xs text-gray-500">{selectedPurchase.userUsername}</p>
                       )}
                       <p className="text-xs text-gray-500">{selectedPurchase.userEmail}</p>
                     </div>
@@ -779,7 +781,6 @@ const Tickets = () => {
             </div>
           </div>
         )}
-      </div>
     </AdminLayout>
   );
 };
