@@ -341,9 +341,52 @@ export const getGroupedPurchasesAdmin = async (
   res: Response
 ): Promise<void> => {
   try {
-    // Usar agregación de MongoDB para agrupar eficientemente
-    // OPTIMIZADO: Solo guardamos campos esenciales para evitar exceder límite de memoria
+    // ESTRATEGIA OPTIMIZADA: Agrupar primero, lookups después
+    // Esto reduce drásticamente las operaciones de join
     const purchases = await Ticket.aggregate([
+      // 1. Redondear fecha de compra
+      {
+        $addFields: {
+          purchaseDateRounded: {
+            $dateFromParts: {
+              year: { $year: '$purchaseDate' },
+              month: { $month: '$purchaseDate' },
+              day: { $dayOfMonth: '$purchaseDate' },
+              hour: { $hour: '$purchaseDate' },
+              minute: { $minute: '$purchaseDate' },
+              second: { $second: '$purchaseDate' }
+            }
+          }
+        }
+      },
+      // 2. AGRUPAR PRIMERO (antes de lookups) - mucho más eficiente
+      {
+        $group: {
+          _id: {
+            userId: '$userId',
+            lotteryId: '$lotteryId',
+            purchaseDate: '$purchaseDateRounded'
+          },
+          userId: { $first: '$userId' },
+          lotteryId: { $first: '$lotteryId' },
+          ticketPrice: { $first: '$price' },
+          purchaseDate: { $first: '$purchaseDateRounded' },
+          // Solo campos esenciales para evitar exceder memoria
+          tickets: {
+            $push: {
+              _id: '$_id',
+              numbers: '$numbers',
+              status: '$status',
+              ticketNumber: '$ticketNumber',
+              price: '$price'
+            }
+          },
+          quantity: { $sum: 1 },
+          totalAmount: { $sum: '$price' },
+          statuses: { $push: '$status' }
+        }
+      },
+      // 3. AHORA hacer lookups (solo para compras agrupadas, no para cada ticket)
       {
         $lookup: {
           from: 'users',
@@ -366,53 +409,14 @@ export const getGroupedPurchasesAdmin = async (
       {
         $unwind: '$lottery'
       },
+      // 4. Calcular estado de la compra
       {
         $addFields: {
-          purchaseDateRounded: {
-            $dateFromParts: {
-              year: { $year: '$purchaseDate' },
-              month: { $month: '$purchaseDate' },
-              day: { $dayOfMonth: '$purchaseDate' },
-              hour: { $hour: '$purchaseDate' },
-              minute: { $minute: '$purchaseDate' },
-              second: { $second: '$purchaseDate' }
-            }
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            userId: '$userId',
-            lotteryId: '$lotteryId',
-            purchaseDate: '$purchaseDateRounded'
-          },
-          userId: { $first: '$userId' },
-          userName: { $first: { $concat: ['$user.firstName', ' ', '$user.lastName'] } },
-          userEmail: { $first: '$user.email' },
-          userUsername: { $first: '$user.username' },
-          lotteryId: { $first: '$lotteryId' },
-          lotteryName: { $first: '$lottery.name' },
-          lotteryControlNumber: { $first: '$lottery.controlNumber' },
-          ticketPrice: { $first: '$price' },
-          purchaseDate: { $first: '$purchaseDateRounded' },
-          // Solo guardar campos esenciales en lugar de $$ROOT completo para ahorrar memoria
-          tickets: {
-            $push: {
-              _id: '$_id',
-              numbers: '$numbers',
-              status: '$status',
-              ticketNumber: '$ticketNumber',
-              price: '$price'
-            }
-          },
-          quantity: { $sum: 1 },
-          totalAmount: { $sum: '$price' },
-          statuses: { $push: '$status' }
-        }
-      },
-      {
-        $addFields: {
+          userName: { $concat: ['$user.firstName', ' ', '$user.lastName'] },
+          userEmail: '$user.email',
+          userUsername: '$user.username',
+          lotteryName: '$lottery.name',
+          lotteryControlNumber: '$lottery.controlNumber',
           hasWinner: { $in: ['won', '$statuses'] },
           hasCancelled: { $in: ['cancelled', '$statuses'] },
           allCancelled: { $allElementsTrue: [{ $map: { input: '$statuses', as: 's', in: { $eq: ['$$s', 'cancelled'] } } }] },
@@ -455,9 +459,11 @@ export const getGroupedPurchasesAdmin = async (
           }
         }
       },
+      // 5. Ordenar por fecha
       {
         $sort: { purchaseDate: -1 }
       },
+      // 6. Proyectar solo campos necesarios
       {
         $project: {
           _id: 0,
