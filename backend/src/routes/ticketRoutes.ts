@@ -5,6 +5,7 @@ import {
   getUserTickets,
   getAllLotteryTickets,
   getAllTicketsAdmin,
+  getGroupedPurchasesAdmin,
   cancelTicket,
   verifyTicket,
   getTicketByNumber,
@@ -42,6 +43,13 @@ router.get('/', authenticate, getUserTickets);
  * @access  Private (Admin/Gerente)
  */
 router.get('/admin/all', authenticate, isAdminOrGerente, getAllTicketsAdmin);
+
+/**
+ * @route   GET /api/tickets/admin/purchases
+ * @desc    Obtiene compras agrupadas optimizadas (Admin/Gerente)
+ * @access  Private (Admin/Gerente)
+ */
+router.get('/admin/purchases', authenticate, isAdminOrGerente, getGroupedPurchasesAdmin);
 
 /**
  * @route   GET /api/tickets/lottery/all

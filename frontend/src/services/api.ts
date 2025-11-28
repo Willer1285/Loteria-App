@@ -91,6 +91,9 @@ export const ticketAPI = {
   // Nuevo: Obtiene TODOS los tickets de TODOS los sorteos (Admin)
   getAllTicketsAdmin: (params?: any) => api.get('/tickets/admin/all', { params }),
 
+  // Nuevo: Obtiene compras agrupadas optimizadas (Admin)
+  getGroupedPurchasesAdmin: () => api.get('/tickets/admin/purchases'),
+
   // Nuevo: Anula un boleto con opción de reintegro y disponibilidad
   cancel: (id: string, data: { refundType: 'full' | 'partial' | 'none'; refundPercentage?: number; reason?: string; makeAvailable?: boolean }) =>
     api.post(`/tickets/${id}/cancel`, data),

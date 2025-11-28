@@ -23,7 +23,6 @@ interface Purchase {
 }
 
 const Tickets = () => {
-  const [tickets, setTickets] = useState<any[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([]);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
@@ -83,80 +82,32 @@ const Tickets = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Cargando tickets desde el endpoint admin...');
-      const response = await ticketAPI.getAllTicketsAdmin({ limit: 10000 });
+      console.log('Cargando compras agrupadas desde el endpoint optimizado...');
+
+      // Usar el nuevo endpoint optimizado que agrupa en el servidor
+      const response = await ticketAPI.getGroupedPurchasesAdmin();
       console.log('Respuesta del servidor:', response.data);
-      const ticketsData = response.data.tickets || [];
-      setTickets(ticketsData);
 
-      // Agrupar boletos por compra
-      const purchasesMap = new Map<string, Purchase>();
+      const purchasesData = response.data.purchases || [];
 
-      ticketsData.forEach((ticket: any) => {
-        // Crear key única para cada compra: userId + lotteryId + purchaseDate (redondeado a segundo)
-        const purchaseDate = new Date(ticket.purchaseDate);
-        purchaseDate.setMilliseconds(0);
-        const purchaseKey = `${ticket.userId._id}_${ticket.lotteryId._id}_${purchaseDate.getTime()}`;
+      // Convertir las fechas de string a Date
+      const formattedPurchases = purchasesData.map((purchase: any) => ({
+        ...purchase,
+        purchaseDate: new Date(purchase.purchaseDate),
+      }));
 
-        if (purchasesMap.has(purchaseKey)) {
-          const purchase = purchasesMap.get(purchaseKey)!;
-          purchase.tickets.push(ticket);
-          purchase.quantity += 1;
-          purchase.totalAmount += ticket.price;
-        } else {
-          purchasesMap.set(purchaseKey, {
-            userId: ticket.userId._id,
-            userName: `${ticket.userId.firstName} ${ticket.userId.lastName}`,
-            userEmail: ticket.userId.email,
-            userUsername: ticket.userId.username,
-            lotteryId: ticket.lotteryId._id,
-            lotteryName: ticket.lotteryId.name,
-            lotteryControlNumber: ticket.lotteryId.controlNumber,
-            ticketPrice: ticket.price,
-            purchaseDate: purchaseDate,
-            tickets: [ticket],
-            totalAmount: ticket.price,
-            quantity: 1,
-            status: ticket.status,
-          });
-        }
-      });
+      setPurchases(formattedPurchases);
 
-      // Actualizar el estado de cada compra basándose en todos sus tickets
-      purchasesMap.forEach((purchase) => {
-        const hasWinner = purchase.tickets.some((t: any) => t.status === 'won');
-        const hasCancelled = purchase.tickets.some((t: any) => t.status === 'cancelled');
-        const allLost = purchase.tickets.every((t: any) => t.status === 'lost');
-        const allActive = purchase.tickets.every((t: any) => t.status === 'active');
-        const allCancelled = purchase.tickets.every((t: any) => t.status === 'cancelled');
+      // Calcular el total de boletos
+      const totalTickets = formattedPurchases.reduce((sum: number, p: any) => sum + p.quantity, 0);
 
-        if (allCancelled) {
-          purchase.status = 'cancelled';
-        } else if (hasWinner) {
-          purchase.status = 'won';
-        } else if (allLost) {
-          purchase.status = 'lost';
-        } else if (allActive) {
-          purchase.status = 'active';
-        } else {
-          // Estado mixto
-          purchase.status = hasCancelled ? 'mixed-cancelled' : 'active';
-        }
-      });
-
-      setPurchases(
-        Array.from(purchasesMap.values()).sort(
-          (a, b) => new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime()
-        )
-      );
-
-      toast.success(`${purchasesMap.size} compras cargadas (${ticketsData.length} boletos)`);
+      toast.success(`${formattedPurchases.length} compras cargadas (${totalTickets} boletos)`);
     } catch (error: any) {
-      console.error('Error al cargar boletos:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar boletos';
+      console.error('Error al cargar compras:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Error desconocido al cargar compras';
       setError(errorMessage);
-      toast.error('Error al cargar boletos. Revisa la consola para más detalles.');
-      setTickets([]);
+      toast.error('Error al cargar compras. Revisa la consola para más detalles.');
+      setPurchases([]);
     } finally {
       setLoading(false);
     }
@@ -484,8 +435,8 @@ const Tickets = () => {
 
         {/* Modal Detalle de Compra */}
         {showPurchaseModal && selectedPurchase && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl p-6 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 m-4 max-w-5xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -605,7 +556,7 @@ const Tickets = () => {
                                 <div>{getTicketStatusBadge(ticket.status)}</div>
                               </div>
                               <p className="text-xs text-gray-500 mt-1">
-                                Número de Boleto: {ticket.ticketNumber}
+                                Ticket Control: {ticket.ticketNumber}
                               </p>
                             </div>
                             {ticket.status !== 'cancelled' && ticket.status !== 'won' && (

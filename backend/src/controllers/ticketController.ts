@@ -334,6 +334,151 @@ export const getAllTicketsAdmin = async (
 };
 
 /**
+ * Obtiene compras agrupadas (solo para admin/gerente) - OPTIMIZADO
+ */
+export const getGroupedPurchasesAdmin = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    // Usar agregación de MongoDB para agrupar eficientemente
+    const purchases = await Ticket.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      {
+        $lookup: {
+          from: 'lotteries',
+          localField: 'lotteryId',
+          foreignField: '_id',
+          as: 'lottery'
+        }
+      },
+      {
+        $unwind: '$user'
+      },
+      {
+        $unwind: '$lottery'
+      },
+      {
+        $addFields: {
+          purchaseDateRounded: {
+            $dateFromParts: {
+              year: { $year: '$purchaseDate' },
+              month: { $month: '$purchaseDate' },
+              day: { $dayOfMonth: '$purchaseDate' },
+              hour: { $hour: '$purchaseDate' },
+              minute: { $minute: '$purchaseDate' },
+              second: { $second: '$purchaseDate' }
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            userId: '$userId',
+            lotteryId: '$lotteryId',
+            purchaseDate: '$purchaseDateRounded'
+          },
+          userId: { $first: '$userId' },
+          userName: { $first: { $concat: ['$user.firstName', ' ', '$user.lastName'] } },
+          userEmail: { $first: '$user.email' },
+          userUsername: { $first: '$user.username' },
+          lotteryId: { $first: '$lotteryId' },
+          lotteryName: { $first: '$lottery.name' },
+          lotteryControlNumber: { $first: '$lottery.controlNumber' },
+          ticketPrice: { $first: '$price' },
+          purchaseDate: { $first: '$purchaseDateRounded' },
+          tickets: { $push: '$$ROOT' },
+          quantity: { $sum: 1 },
+          totalAmount: { $sum: '$price' },
+          statuses: { $push: '$status' }
+        }
+      },
+      {
+        $addFields: {
+          hasWinner: { $in: ['won', '$statuses'] },
+          hasCancelled: { $in: ['cancelled', '$statuses'] },
+          allCancelled: { $allElementsTrue: [{ $map: { input: '$statuses', as: 's', in: { $eq: ['$$s', 'cancelled'] } } }] },
+          allLost: { $allElementsTrue: [{ $map: { input: '$statuses', as: 's', in: { $eq: ['$$s', 'lost'] } } }] },
+          allActive: { $allElementsTrue: [{ $map: { input: '$statuses', as: 's', in: { $eq: ['$$s', 'active'] } } }] }
+        }
+      },
+      {
+        $addFields: {
+          status: {
+            $cond: {
+              if: '$allCancelled',
+              then: 'cancelled',
+              else: {
+                $cond: {
+                  if: '$hasWinner',
+                  then: 'won',
+                  else: {
+                    $cond: {
+                      if: '$allLost',
+                      then: 'lost',
+                      else: {
+                        $cond: {
+                          if: '$allActive',
+                          then: 'active',
+                          else: {
+                            $cond: {
+                              if: '$hasCancelled',
+                              then: 'mixed-cancelled',
+                              else: 'active'
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $sort: { purchaseDate: -1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: 1,
+          userName: 1,
+          userEmail: 1,
+          userUsername: 1,
+          lotteryId: 1,
+          lotteryName: 1,
+          lotteryControlNumber: 1,
+          ticketPrice: 1,
+          purchaseDate: 1,
+          tickets: 1,
+          quantity: 1,
+          totalAmount: 1,
+          status: 1
+        }
+      }
+    ]);
+
+    res.json({
+      purchases,
+      total: purchases.length
+    });
+  } catch (error) {
+    console.error('Error al obtener compras agrupadas:', error);
+    res.status(500).json({ error: 'Error al obtener compras agrupadas' });
+  }
+};
+
+/**
  * Verifica un boleto por código
  */
 export const verifyTicket = async (
