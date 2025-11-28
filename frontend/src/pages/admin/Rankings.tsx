@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import AdminLayout from '../../components/AdminLayout';
 import { rankingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { Trophy, ShoppingBag, TrendingUp } from 'lucide-react';
+import { Trophy, ShoppingBag, TrendingUp, Eye, X, User, Mail, Hash, Calendar, DollarSign } from 'lucide-react';
 
 const AdminRankings = () => {
   const [activeTab, setActiveTab] = useState<'buyers' | 'winners' | 'spenders'>('buyers');
   const [rankings, setRankings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     loadRankings();
@@ -49,6 +51,38 @@ const AdminRankings = () => {
     }
   };
 
+  const openUserModal = (item: any) => {
+    setSelectedUser(item);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
+  };
+
+  const getCategoryTitle = () => {
+    switch (activeTab) {
+      case 'buyers':
+        return 'Ticket Master';
+      case 'winners':
+        return 'Campeón';
+      case 'spenders':
+        return 'Tiburón';
+    }
+  };
+
+  const getCategoryIcon = () => {
+    switch (activeTab) {
+      case 'buyers':
+        return ShoppingBag;
+      case 'winners':
+        return Trophy;
+      case 'spenders':
+        return TrendingUp;
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -70,7 +104,7 @@ const AdminRankings = () => {
             }`}
           >
             <ShoppingBag size={20} />
-            <span>Más Boletos Comprados</span>
+            <span>Ticket Master</span>
           </button>
 
           <button
@@ -82,7 +116,7 @@ const AdminRankings = () => {
             }`}
           >
             <Trophy size={20} />
-            <span>Más Ganadores</span>
+            <span>Campeón</span>
           </button>
 
           <button
@@ -94,7 +128,7 @@ const AdminRankings = () => {
             }`}
           >
             <TrendingUp size={20} />
-            <span>Más Dinero Gastado</span>
+            <span>Tiburón</span>
           </button>
         </div>
 
@@ -111,13 +145,7 @@ const AdminRankings = () => {
                     Posición
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Jugador
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Usuario
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Email
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     {activeTab === 'buyers'
@@ -125,6 +153,9 @@ const AdminRankings = () => {
                       : activeTab === 'winners'
                       ? 'Total Ganado'
                       : 'Total Gastado'}
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Acciones
                   </th>
                 </tr>
               </thead>
@@ -143,20 +174,8 @@ const AdminRankings = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {item.user.firstName} {item.user.lastName}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-900 font-medium">
                         {item.user.username}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-600">
-                        {item.user.email}
                       </p>
                     </td>
                     <td className="px-6 py-4">
@@ -167,6 +186,15 @@ const AdminRankings = () => {
                           ? `$${item.totalWon?.toFixed(2)}`
                           : `$${item.totalSpent?.toFixed(2)}`}
                       </p>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => openUserModal(item)}
+                        className="inline-flex items-center space-x-1 px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+                      >
+                        <Eye size={16} />
+                        <span>Ver</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -184,6 +212,138 @@ const AdminRankings = () => {
           </div>
         )}
       </div>
+
+      {/* Modal de detalles del usuario */}
+      {showModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Detalles del Usuario</h2>
+                <p className="text-sm text-gray-600 mt-1">Categoría: {getCategoryTitle()}</p>
+              </div>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Posición en el ranking */}
+            <div className="bg-gradient-to-r from-primary-50 to-primary-100 rounded-xl p-6 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className={`p-3 rounded-full ${
+                    selectedUser.position === 1 ? 'bg-yellow-500' :
+                    selectedUser.position === 2 ? 'bg-gray-400' :
+                    selectedUser.position === 3 ? 'bg-orange-600' :
+                    'bg-primary-600'
+                  }`}>
+                    <Trophy className="text-white" size={28} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 font-medium">Posición en el Ranking</p>
+                    <p className="text-3xl font-bold text-primary-900">#{selectedUser.position}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 font-medium">
+                    {activeTab === 'buyers'
+                      ? 'Boletos Comprados'
+                      : activeTab === 'winners'
+                      ? 'Total Ganado'
+                      : 'Total Gastado'}
+                  </p>
+                  <p className="text-2xl font-bold text-primary-900">
+                    {activeTab === 'buyers'
+                      ? selectedUser.ticketsPurchased
+                      : activeTab === 'winners'
+                      ? `$${selectedUser.totalWon?.toFixed(2)}`
+                      : `$${selectedUser.totalSpent?.toFixed(2)}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Información del usuario */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900 text-lg">Información del Usuario</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <User className="text-primary-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Nombre Completo</p>
+                    <p className="font-semibold text-gray-900">
+                      {selectedUser.user.firstName} {selectedUser.user.lastName}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <Hash className="text-primary-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Usuario</p>
+                    <p className="font-semibold text-gray-900">{selectedUser.user.username}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <Mail className="text-primary-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Email</p>
+                    <p className="font-semibold text-gray-900 text-sm break-all">
+                      {selectedUser.user.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <DollarSign className="text-green-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Saldo Actual</p>
+                    <p className="font-semibold text-green-600">
+                      ${selectedUser.user.balance?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedUser.user.phone && (
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <Hash className="text-primary-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Teléfono</p>
+                    <p className="font-semibold text-gray-900">{selectedUser.user.phone}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedUser.user.address && (
+                <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                  <Calendar className="text-primary-600 mt-0.5" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium">Dirección</p>
+                    <p className="font-semibold text-gray-900">{selectedUser.user.address}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-6 pt-4 border-t">
+              <button
+                onClick={closeModal}
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

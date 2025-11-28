@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import PublicLayout from '../components/PublicLayout';
 import { rankingAPI } from '../services/api';
 import toast from 'react-hot-toast';
-import { Trophy, TrendingUp, Zap, Award } from 'lucide-react';
+import { Trophy, TrendingUp, Zap, Award, ShoppingBag } from 'lucide-react';
 
 const PublicRankings = () => {
   const [topBuyers, setTopBuyers] = useState<any[]>([]);
   const [topWinners, setTopWinners] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'buyers' | 'winners'>('buyers');
+  const [topSpenders, setTopSpenders] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'buyers' | 'winners' | 'spenders'>('buyers');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,13 +17,15 @@ const PublicRankings = () => {
 
   const loadRankings = async () => {
     try {
-      const [buyersRes, winnersRes] = await Promise.all([
+      const [buyersRes, winnersRes, spendersRes] = await Promise.all([
         rankingAPI.getTopBuyers({ limit: 20 }),
         rankingAPI.getTopWinners({ limit: 20 }),
+        rankingAPI.getTopSpenders({ limit: 20 }),
       ]);
 
       setTopBuyers(buyersRes.data.ranking);
       setTopWinners(winnersRes.data.ranking);
+      setTopSpenders(spendersRes.data.ranking);
     } catch (error) {
       toast.error('Error al cargar rankings');
     } finally {
@@ -47,10 +50,24 @@ const PublicRankings = () => {
     if (position <= 3) {
       return <Trophy className="text-white" size={20} />;
     }
-    return <span className="text-white font-bold">{position}</span>;
+    return <span className="text-white font-bold">#{position}</span>;
   };
 
-  const rankings = activeTab === 'buyers' ? topBuyers : topWinners;
+  const rankings =
+    activeTab === 'buyers' ? topBuyers :
+    activeTab === 'winners' ? topWinners :
+    topSpenders;
+
+  const getCategoryTitle = () => {
+    switch (activeTab) {
+      case 'buyers':
+        return 'Ticket Master';
+      case 'winners':
+        return 'Campeón';
+      case 'spenders':
+        return 'Tiburón';
+    }
+  };
 
   return (
     <PublicLayout>
@@ -62,12 +79,12 @@ const PublicRankings = () => {
             <h1 className="text-4xl font-bold">Rankings de Jugadores</h1>
           </div>
           <p className="text-primary-100 text-lg">
-            Los mejores jugadores de nuestra plataforma
+            Los mejores jugadores de nuestra plataforma - {getCategoryTitle()}
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-md p-2 inline-flex">
+        <div className="bg-white rounded-lg shadow-md p-2 inline-flex gap-2">
           <button
             onClick={() => setActiveTab('buyers')}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
@@ -76,8 +93,8 @@ const PublicRankings = () => {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <Zap size={20} />
-            <span>Más Boletos Comprados</span>
+            <ShoppingBag size={20} />
+            <span>Ticket Master</span>
           </button>
           <button
             onClick={() => setActiveTab('winners')}
@@ -87,8 +104,19 @@ const PublicRankings = () => {
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
+            <Trophy size={20} />
+            <span>Campeón</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('spenders')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'spenders'
+                ? 'bg-primary-600 text-white shadow-md'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
             <TrendingUp size={20} />
-            <span>Más Ganancias</span>
+            <span>Tiburón</span>
           </button>
         </div>
 
@@ -118,7 +146,9 @@ const PublicRankings = () => {
                       <h3 className="text-xl font-bold text-gray-900">
                         {player.user.username}
                       </h3>
-                      <p className="text-sm text-gray-600">Jugador</p>
+                      <p className="text-sm text-gray-600">
+                        Posición #{player.position} - {getCategoryTitle()}
+                      </p>
                     </div>
 
                     {/* Stats */}
@@ -128,19 +158,29 @@ const PublicRankings = () => {
                           <p className="text-3xl font-bold text-primary-600">
                             {player.ticketsPurchased}
                           </p>
-                          <p className="text-sm text-gray-600">Boletos</p>
+                          <p className="text-sm text-gray-600">Boletos Comprados</p>
                           <p className="text-sm text-gray-500 mt-1">
-                            ${player.totalSpent.toLocaleString()} gastados
+                            ${player.totalSpent?.toLocaleString() || '0'} gastados
+                          </p>
+                        </>
+                      ) : activeTab === 'winners' ? (
+                        <>
+                          <p className="text-3xl font-bold text-green-600">
+                            ${player.totalWon?.toLocaleString() || '0'}
+                          </p>
+                          <p className="text-sm text-gray-600">Total Ganado</p>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {player.ticketsPurchased} boletos jugados
                           </p>
                         </>
                       ) : (
                         <>
-                          <p className="text-3xl font-bold text-green-600">
-                            ${player.totalWon.toLocaleString()}
+                          <p className="text-3xl font-bold text-orange-600">
+                            ${player.totalSpent?.toLocaleString() || '0'}
                           </p>
-                          <p className="text-sm text-gray-600">Ganados</p>
+                          <p className="text-sm text-gray-600">Total Gastado</p>
                           <p className="text-sm text-gray-500 mt-1">
-                            {player.ticketsPurchased} boletos jugados
+                            {player.ticketsPurchased} boletos comprados
                           </p>
                         </>
                       )}
