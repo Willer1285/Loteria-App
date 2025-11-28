@@ -34,6 +34,7 @@ const Tickets = () => {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showNumbers, setShowNumbers] = useState(false);
+  const [ticketSearchTerm, setTicketSearchTerm] = useState('');
 
   // Estados de cancelación
   const [cancelData, setCancelData] = useState({
@@ -167,6 +168,7 @@ const Tickets = () => {
     setShowPurchaseModal(false);
     setSelectedPurchase(null);
     setShowNumbers(false);
+    setTicketSearchTerm('');
   };
 
   const openCancelModal = (ticket: any) => {
@@ -540,39 +542,81 @@ const Tickets = () => {
                 </div>
 
                 {showNumbers && (
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-                      {selectedPurchase.tickets.map((ticket, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-primary-400 transition-all"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3">
-                                <div className="font-mono text-lg font-bold text-primary-600">
-                                  {ticket.numbers[0].toString().padStart(4, '0')}
-                                </div>
-                                <div>{getTicketStatusBadge(ticket.status)}</div>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Ticket Control: {ticket.ticketNumber}
-                              </p>
-                            </div>
-                            {ticket.status !== 'cancelled' && ticket.status !== 'won' && (
-                              <button
-                                onClick={() => openCancelModal(ticket)}
-                                className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Anular boleto"
-                              >
-                                <XCircle size={18} />
-                                <span className="text-sm font-medium">Anular</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                    {/* Buscador de boletos */}
+                    <div className="relative">
+                      <Search
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        size={18}
+                      />
+                      <input
+                        type="text"
+                        value={ticketSearchTerm}
+                        onChange={(e) => setTicketSearchTerm(e.target.value)}
+                        placeholder="Buscar por número de boleto..."
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                      />
                     </div>
+
+                    {/* Lista de boletos */}
+                    <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                      {selectedPurchase.tickets
+                        // Filtrar por término de búsqueda
+                        .filter((ticket) => {
+                          if (!ticketSearchTerm) return true;
+                          const searchLower = ticketSearchTerm.toLowerCase();
+                          return (
+                            ticket.numbers[0].toString().includes(ticketSearchTerm) ||
+                            ticket.ticketNumber.toLowerCase().includes(searchLower)
+                          );
+                        })
+                        // Ordenar ascendente por número
+                        .sort((a, b) => a.numbers[0] - b.numbers[0])
+                        .map((ticket, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-primary-400 transition-all"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3">
+                                  <div className="font-mono text-lg font-bold text-primary-600">
+                                    {ticket.numbers[0].toString().padStart(4, '0')}
+                                  </div>
+                                  <div>{getTicketStatusBadge(ticket.status)}</div>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Ticket Control: {ticket.ticketNumber}
+                                </p>
+                              </div>
+                              {ticket.status !== 'cancelled' && ticket.status !== 'won' && (
+                                <button
+                                  onClick={() => openCancelModal(ticket)}
+                                  className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Anular boleto"
+                                >
+                                  <XCircle size={18} />
+                                  <span className="text-sm font-medium">Anular</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* Mensaje cuando no hay resultados */}
+                    {selectedPurchase.tickets.filter((ticket) => {
+                      if (!ticketSearchTerm) return true;
+                      const searchLower = ticketSearchTerm.toLowerCase();
+                      return (
+                        ticket.numbers[0].toString().includes(ticketSearchTerm) ||
+                        ticket.ticketNumber.toLowerCase().includes(searchLower)
+                      );
+                    }).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        No se encontraron boletos con el término "{ticketSearchTerm}"
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -596,7 +640,7 @@ const Tickets = () => {
                   Número: <span className="font-mono font-bold text-lg text-primary-600">{selectedTicket.numbers[0]}</span>
                 </p>
                 <p className="text-sm text-gray-600">
-                  Boleto: <span className="font-semibold">{selectedTicket.ticketNumber}</span>
+                  Ticket Control: <span className="font-semibold">{selectedTicket.ticketNumber}</span>
                 </p>
                 <p className="text-sm text-gray-600">
                   Monto: <span className="font-semibold text-green-600">${selectedTicket.price?.toFixed(2)}</span>
